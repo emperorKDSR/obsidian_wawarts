@@ -1,0 +1,10 @@
+{
+  "id": "wawarts",
+  "name": "Wawarts",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Monitor recurring bills, subscriptions, dues, and cashflow in Obsidian with note-backed ledger and insights.",
+  "author": "Antigravity",
+  "authorUrl": "https://github.com/emperorKDSR/obsidian_diwa",
+  "isDesktopOnly": false
+}
