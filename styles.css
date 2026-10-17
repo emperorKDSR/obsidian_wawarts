@@ -64,29 +64,32 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    border-radius: 9999px;
+    padding: 0 12px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: var(--diwa-radius-pill, 9999px);
     background-color: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--diwa-transition, all 0.15s ease);
     max-width: 240px;
+    box-sizing: border-box;
 }
 
 .bills-folder-pill-btn:hover {
     background-color: var(--background-modifier-hover);
     color: var(--text-normal);
-    border-color: var(--interactive-accent);
+    border-color: var(--background-modifier-border-hover, var(--text-muted));
 }
 
 .bills-folder-pill-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--interactive-accent);
+    color: var(--text-muted);
 }
 
 .bills-folder-pill-icon svg {
@@ -249,31 +252,36 @@
 }
 
 .bills-nav-tab {
-    background: var(--background-primary);
+    background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
-    border-radius: 8px;
-    padding: 7px 14px;
-    font-size: 0.86rem;
-    font-weight: 600;
+    border-radius: var(--diwa-radius-pill, 9999px);
+    padding: 0 12px;
+    font-size: 0.82rem;
+    font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    transition: all 0.15s ease;
+    gap: 6px;
+    transition: var(--diwa-transition, all 0.15s ease);
     white-space: nowrap;
-    min-height: 38px;
+    height: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
+    line-height: 1;
 }
 
 .bills-nav-tab:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
+    border-color: var(--background-modifier-border-hover, var(--text-muted));
 }
 
 .bills-nav-tab--active {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    border-color: var(--text-muted);
+    font-weight: 600;
 }
 
 .bills-nav-tab-icon {
@@ -282,8 +290,8 @@
 }
 
 .bills-nav-tab-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
 }
 
 .bills-filter-actions-group {
@@ -317,49 +325,74 @@
 }
 
 .bills-pill {
-    background: var(--background-primary);
+    background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
-    border-radius: 20px;
-    padding: 5px 12px;
+    border-radius: var(--diwa-radius-pill, 9999px);
+    padding: 0 12px;
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.15s ease;
+    transition: var(--diwa-transition, all 0.15s ease);
     white-space: nowrap;
+    height: 32px;
     min-height: 32px;
+    box-sizing: border-box;
+    line-height: 1;
 }
 
 .bills-pill:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
+    border-color: var(--background-modifier-border-hover, var(--text-muted));
 }
 
 .bills-pill--active {
-    background: var(--background-modifier-active-hover, rgba(var(--interactive-accent-rgb, 120, 100, 240), 0.2));
-    border-color: var(--interactive-accent);
-    color: var(--interactive-accent);
+    background: var(--background-modifier-hover);
+    border-color: var(--text-muted);
+    color: var(--text-normal);
     font-weight: 600;
 }
 
 .bills-pill-badge {
-    background: var(--background-secondary-alt, rgba(255, 255, 255, 0.15));
-    border-radius: 10px;
+    background: var(--background-primary);
+    color: var(--text-muted);
+    border-radius: 9999px;
     padding: 1px 6px;
-    font-size: 0.72rem;
+    font-size: 0.70rem;
+    font-weight: 600;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+}
+
+.bills-nav-tab--active .bills-pill-badge,
+.bills-pill--active .bills-pill-badge {
+    background: var(--background-primary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
 }
 
 .bill-count--warning {
-    background: var(--background-modifier-hover);
+    background: var(--background-primary);
     color: var(--text-muted);
 }
 
 .bill-count--danger {
     background: rgba(239, 68, 68, 0.08);
     color: rgba(239, 68, 68, 0.85);
+}
+
+.bill-count--success {
+    background: var(--background-primary);
+    color: var(--text-muted);
 }
 
 .bills-search-wrapper {
@@ -1392,15 +1425,18 @@
     }
 
     .bills-nav-tab {
-        padding: 7px 4px !important;
-        font-size: 0.74rem !important;
+        padding: 0 4px !important;
+        font-size: 0.76rem !important;
         justify-content: center !important;
-        min-height: 34px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        border-radius: var(--diwa-radius-pill) !important;
         min-width: 0 !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         gap: 4px !important;
+        box-sizing: border-box !important;
     }
 
     .bills-nav-tab span {
@@ -1428,12 +1464,16 @@
         width: 100% !important;
         justify-content: center !important;
         font-size: 0.76rem !important;
-        padding: 6px 8px !important;
+        padding: 0 8px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        border-radius: var(--diwa-radius-pill) !important;
         min-width: 0 !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         gap: 4px !important;
+        box-sizing: border-box !important;
     }
 
     .bills-filter-actions-group button span {
@@ -1469,9 +1509,12 @@
 
     .bills-pill {
         flex-shrink: 0 !important;
-        padding: 4px 10px !important;
-        font-size: 0.78rem !important;
-        min-height: 28px !important;
+        padding: 0 10px !important;
+        font-size: 0.76rem !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        border-radius: var(--diwa-radius-pill) !important;
+        box-sizing: border-box !important;
     }
 
     .bills-search-wrapper {
@@ -2274,33 +2317,40 @@
 .pos-header-text-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-size: 0.82rem;
-    font-weight: 600;
-    padding: 4px 12px;
+    font-weight: 500;
+    padding: 0 12px;
+    height: 32px;
+    min-height: 32px;
     border-radius: var(--diwa-radius-pill);
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
     cursor: pointer;
     transition: var(--diwa-transition);
+    box-sizing: border-box;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .pos-header-text-btn:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
-    border-color: var(--interactive-accent);
+    border-color: var(--background-modifier-border-hover, var(--text-muted));
 }
 
 .pos-header-text-btn.mod-cta {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: transparent;
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    font-weight: 600;
 }
 
 .pos-header-text-btn.mod-cta:hover {
-    background: var(--interactive-accent-hover, var(--interactive-accent));
-    opacity: 0.92;
+    background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+    border-color: var(--text-muted);
 }
 
 .pos-btn-icon {
@@ -2324,14 +2374,17 @@
     align-items: center;
     min-width: 220px;
     max-width: 340px;
+    height: 32px;
+    min-height: 32px;
     box-sizing: border-box;
 }
 
 .pos-search-input {
     width: 100%;
+    height: 32px;
     min-height: 32px;
-    padding: 6px 32px 6px 32px;
-    font-size: 0.84rem;
+    padding: 0 32px 0 32px;
+    font-size: 0.82rem;
     border-radius: var(--diwa-radius-pill);
     border: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
@@ -2400,7 +2453,10 @@
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--diwa-radius-pill);
-    padding: 2px 6px;
+    padding: 0 6px;
+    height: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
 }
 
 .bills-month-step-btn {
@@ -2435,15 +2491,25 @@
     padding: 2px 6px;
     cursor: pointer;
     box-shadow: none !important;
+    height: 28px !important;
+    line-height: 28px !important;
 }
 
 .bills-today-jump-btn {
     font-size: 0.75rem;
-    padding: 2px 8px;
+    font-weight: 500;
+    padding: 0 8px;
+    height: 24px;
+    min-height: 24px;
+    line-height: 24px;
     background: var(--background-modifier-hover);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--diwa-radius-pill);
     color: var(--text-normal);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
 /* ── Cockpit Stage (DIWA Split Architecture) ── */
@@ -2662,7 +2728,30 @@
 
 .wawarts-date-chip {
     font-size: 0.76rem !important;
-    padding: 3px 10px !important;
+    padding: 0 10px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    border-radius: var(--diwa-radius-pill) !important;
+    background: var(--background-secondary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    color: var(--text-muted) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+}
+
+.wawarts-date-chip:hover {
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-normal) !important;
+    border-color: var(--background-modifier-border-hover, var(--text-muted)) !important;
+}
+
+.wawarts-date-chip.is-active {
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-normal) !important;
+    border-color: var(--text-muted) !important;
+    font-weight: 600 !important;
 }
 
 .wawarts-insp-grid {
