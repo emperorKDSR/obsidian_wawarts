@@ -261,23 +261,31 @@
 }
 
 .bills-nav-tab {
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-muted);
-    border-radius: var(--diwa-radius-pill, 9999px);
-    padding: 0 12px;
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: var(--diwa-transition, all 0.15s ease);
-    white-space: nowrap;
-    height: 32px;
-    min-height: 32px;
-    box-sizing: border-box;
-    line-height: 1;
+    background: var(--background-secondary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    color: var(--text-muted) !important;
+    border-radius: var(--diwa-radius-pill, 9999px) !important;
+    padding: 0 12px !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 6px !important;
+    transition: var(--diwa-transition, all 0.15s ease) !important;
+    white-space: nowrap !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    width: 165px !important;
+    min-width: 165px !important;
+    max-width: 165px !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
 }
 
 .bills-nav-tab:hover {
