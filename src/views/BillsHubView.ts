@@ -205,50 +205,6 @@ export class BillsHubView extends ItemView {
         titleSection.createEl('span', { text: 'Wawarts', cls: 'pos-header-logo bills-main-title' });
         titleSection.createEl('span', { text: 'Personal Dues & Cashflow Cockpit', cls: 'pos-header-subtitle' });
 
-        // Header Actions (Right)
-        const headerActions = headerEl.createEl('div', { cls: 'pos-header-actions bills-title-right' });
-
-        // Quick Generator Pill
-        const quickGenBtn = headerActions.createEl('button', {
-            cls: 'pos-header-text-btn',
-        });
-        const zapIcon = quickGenBtn.createEl('span', { cls: 'pos-btn-icon' });
-        setIcon(zapIcon, 'sparkles');
-        quickGenBtn.createEl('span', { text: 'Generate Month Dues' });
-        quickGenBtn.addEventListener('click', () => {
-            new GenerateTransactionsModal(
-                this.app,
-                this.vaultService,
-                this.indexService,
-                this.settings,
-                () => this.render()
-            ).open();
-        });
-
-        // Quick New Master Bill Pill
-        const newBillBtn = headerActions.createEl('button', {
-            cls: 'pos-header-text-btn',
-        });
-        const plusIcon = newBillBtn.createEl('span', { cls: 'pos-btn-icon' });
-        setIcon(plusIcon, 'plus');
-        newBillBtn.createEl('span', { text: 'New Master' });
-        newBillBtn.addEventListener('click', () => {
-            new NewMasterBillModal(
-                this.app,
-                this.vaultService,
-                this.settings,
-                () => this.render()
-            ).open();
-        });
-
-        // Settings / More Utility Button
-        const settingsBtn = headerActions.createEl('button', {
-            cls: 'pos-header-icon-btn clickable-icon',
-            attr: { 'aria-label': 'Vault Folders & Settings' },
-        });
-        setIcon(settingsBtn, 'settings');
-        settingsBtn.addEventListener('click', () => this.openFolderSettingsModal());
-
         // --- 2. Summary KPI Cards ---
         const summaryContainer = contentEl.createEl('div', { cls: 'bills-summary-wrapper' });
         BillsSummaryCards.render(
