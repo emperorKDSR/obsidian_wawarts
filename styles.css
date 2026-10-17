@@ -1460,14 +1460,17 @@
     }
 
     /* Action Buttons row on mobile */
-    .bills-filter-actions-group {
+    .bills-filter-actions-group,
+    .pos-header-actions {
         width: 100% !important;
         display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) auto !important;
         gap: 6px !important;
         min-width: 0 !important;
     }
 
+    .pos-header-actions .pos-header-text-btn,
+    .bills-filter-actions-group .pos-header-text-btn,
     .bills-gen-btn,
     .bills-filter-actions-group button {
         width: 100% !important;
@@ -1476,8 +1479,10 @@
         padding: 0 8px !important;
         height: 32px !important;
         min-height: 32px !important;
+        max-height: 32px !important;
         border-radius: var(--diwa-radius-pill) !important;
         min-width: 0 !important;
+        max-width: 100% !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -1485,6 +1490,7 @@
         box-sizing: border-box !important;
     }
 
+    .pos-header-actions button span,
     .bills-filter-actions-group button span {
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -2347,6 +2353,23 @@
     margin: 0 !important;
 }
 
+/* Enforce EXACT identical width, height, and pill curvature for header action buttons */
+.pos-header-actions .pos-header-text-btn,
+.bills-filter-actions-group .pos-header-text-btn {
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+}
+
 .pos-header-text-btn:hover {
     background: var(--background-modifier-hover) !important;
     color: var(--text-normal) !important;
@@ -2358,7 +2381,10 @@
     color: var(--text-normal) !important;
     border: 1px solid var(--background-modifier-border) !important;
     font-weight: 500 !important;
-    padding: 0 14px !important;
+    padding: 0 10px !important;
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
     height: 32px !important;
     min-height: 32px !important;
     max-height: 32px !important;

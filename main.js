@@ -1051,14 +1051,14 @@ var BillsFilterBar = class {
     });
     const zapIcon = genBtn.createEl("span", { cls: "pos-btn-icon" });
     (0, import_obsidian5.setIcon)(zapIcon, "sparkles");
-    genBtn.createEl("span", { text: "Generate Due Files" });
+    genBtn.createEl("span", { text: "Generate Month Dues" });
     genBtn.addEventListener("click", onOpenGenerateModal);
     const addMasterBtn = actionGroup.createEl("button", {
       cls: "pos-header-text-btn"
     });
     const plusIcon = addMasterBtn.createEl("span", { cls: "pos-btn-icon" });
     (0, import_obsidian5.setIcon)(plusIcon, "plus");
-    addMasterBtn.createEl("span", { text: "New Master Bill" });
+    addMasterBtn.createEl("span", { text: "New Master" });
     addMasterBtn.addEventListener("click", onOpenNewMasterModal);
     if (onOpenSettingsModal) {
       const settingsBtn = actionGroup.createEl("button", {

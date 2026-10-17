@@ -71,7 +71,7 @@ export class BillsFilterBar {
         });
         const zapIcon = genBtn.createEl('span', { cls: 'pos-btn-icon' });
         setIcon(zapIcon, 'sparkles');
-        genBtn.createEl('span', { text: 'Generate Due Files' });
+        genBtn.createEl('span', { text: 'Generate Month Dues' });
         genBtn.addEventListener('click', onOpenGenerateModal);
 
         // Add Master Bill Button
@@ -80,7 +80,7 @@ export class BillsFilterBar {
         });
         const plusIcon = addMasterBtn.createEl('span', { cls: 'pos-btn-icon' });
         setIcon(plusIcon, 'plus');
-        addMasterBtn.createEl('span', { text: 'New Master Bill' });
+        addMasterBtn.createEl('span', { text: 'New Master' });
         addMasterBtn.addEventListener('click', onOpenNewMasterModal);
 
         // Folder & Settings Button
