@@ -107,15 +107,15 @@ export const FREQUENCY_LABELS: Record<BillFrequency, string> = {
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-    'Utilities': 'var(--color-yellow, #eab308)',
-    'Subscriptions': 'var(--color-purple, #a855f7)',
-    'Housing & Rent': 'var(--color-blue, #3b82f6)',
-    'Software & SaaS': 'var(--color-cyan, #06b6d4)',
-    'Insurance': 'var(--color-red, #ef4444)',
-    'Telecom & Internet': 'var(--color-indigo, #6366f1)',
-    'Fitness & Health': 'var(--color-green, #10b981)',
-    'Memberships': 'var(--color-orange, #f97316)',
-    'Credit & Loans': 'var(--color-pink, #ec4899)',
-    'Taxes & Government': 'var(--color-emerald, #059669)',
-    'Other': 'var(--text-muted, #888888)',
+    'Utilities': 'var(--text-muted)',
+    'Subscriptions': 'var(--text-muted)',
+    'Housing & Rent': 'var(--text-muted)',
+    'Software & SaaS': 'var(--text-muted)',
+    'Insurance': 'var(--text-muted)',
+    'Telecom & Internet': 'var(--text-muted)',
+    'Fitness & Health': 'var(--text-muted)',
+    'Memberships': 'var(--text-muted)',
+    'Credit & Loans': 'var(--text-muted)',
+    'Taxes & Government': 'var(--text-muted)',
+    'Other': 'var(--text-muted)',
 };

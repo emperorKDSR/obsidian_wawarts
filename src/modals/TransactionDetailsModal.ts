@@ -5,6 +5,7 @@ import { formatCurrency } from '../utils/currencyUtils';
 import { getRelativeDueDateLabel } from '../utils/dateUtils';
 import { PayTransactionModal } from './PayTransactionModal';
 import { ConfirmModal } from './ConfirmModal';
+import { openNoteSafely } from '../utils/navigationUtils';
 
 export class TransactionDetailsModal extends Modal {
     private transaction: BillTransaction;
@@ -110,7 +111,7 @@ export class TransactionDetailsModal extends Modal {
         const openFileBtn = actionToolbar.createEl('button', { text: 'Open Transaction Note', cls: 'bills-btn-secondary' });
         openFileBtn.addEventListener('click', async () => {
             this.close();
-            await this.app.workspace.getLeaf(false).openFile(this.transaction.file);
+            await openNoteSafely(this.app, this.transaction.file, undefined, { fallbackLeaf: 'split' });
         });
 
         const deleteBtn = actionToolbar.createEl('button', { text: 'Delete Due File', cls: 'bills-btn-danger' });

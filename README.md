@@ -143,6 +143,33 @@ _Paste confirmation screenshot or billing invoice here._
 
 ---
 
+## 🎨 UI & UX Philosophy (DIWA Standards)
+
+Wawarts strictly adheres to the UI and UX craftsmanship codified in **[DIWA](https://github.com/emperorKDSR/obsidian_diwa)**:
+
+1. **Leaf Safeguarding & Context Preservation**:
+   - Clicking note links, master profiles, or due instances **never evicts the Wawarts workspace view**.
+   - On Desktop: Reuses an adjacent open markdown leaf or opens a vertical split (`split: 'vertical'`). Supports `Cmd/Ctrl+Click` (new tab) and `Alt+Click` (popout window).
+   - Native Hover Preview: Hovering over any bill name or wikilink triggers Obsidian's native page preview popover via `hover-link`.
+   - Right-click Context Menu: Instant access to *Open in Split*, *Open in Tab*, and *Copy Wikilink*.
+
+2. **Dual-Pane Power Cockpit & Slide-Over Inspector**:
+   - Selecting any row in the Due Ledger or Master Catalog smoothly opens the **Slide-Over Inspector Drawer** on the right side.
+   - Live In-Inspector Markdown Renderer: renders the note's body notes and settlement receipts with Obsidian's native `MarkdownRenderer`.
+   - In-Inspector Quick Append: type notes or paste confirmation codes directly into the file without leaving the cockpit.
+   - Quick Snooze & Reschedule Chips: `[ Today ]`, `[ Tomorrow ]`, `[ +7d ]`.
+   - On Mobile: Automatically presents as an ergonomic bottom sheet with drag-handle and backdrop blur.
+
+3. **Universal Search & Keyboard Flow**:
+   - Press `/` anywhere in the dashboard to immediately focus and select the centered search capsule.
+   - Press `Escape` to clear search or close the active inspector drawer.
+
+4. **100% Obsidian Native Design Tokens**:
+   - Built exclusively with Obsidian semantic CSS custom properties (`--background-primary`, `--background-secondary`, `--text-normal`, `--text-muted`, `--interactive-accent`, `--color-green`, `--color-red`, etc.). Zero hardcoded hex colors, guaranteeing seamless compatibility with any community theme or light/dark mode.
+   - Standard DIWA corner radii (`12px` cards/tables, `16px-20px` sheets, `9999px` pills) and glass-surface elevation.
+
+---
+
 ## 🛠️ Build & Development
 
 ```bash

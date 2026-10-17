@@ -1,10 +1,12 @@
-import { ItemView, WorkspaceLeaf, setIcon, Notice, Menu } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Notice, Menu, Platform } from 'obsidian';
 import { VIEW_TYPE_BILLS_HUB, BILLS_RIBBON_ICON_ID } from '../constants';
 import {
     HubTab,
     TransactionFilterOptions,
     MasterFilterOptions,
     RecurringBillsSettings,
+    BillTransaction,
+    MasterBill,
 } from '../types';
 import { BillIndexService } from '../services/BillIndexService';
 import { BillVaultService } from '../services/BillVaultService';
@@ -12,15 +14,16 @@ import { AnalyticsService } from '../services/AnalyticsService';
 import { RefreshCoordinator } from '../services/RefreshCoordinator';
 import { BillsSummaryCards } from './components/BillsSummaryCards';
 import { BillsFilterBar } from './components/BillsFilterBar';
-import { BillCardItem } from './components/BillCardItem';
-import { MasterBillCardItem } from './components/MasterBillCardItem';
 import { MasterCatalogTable } from './components/MasterCatalogTable';
 import { DueLedgerTable } from './components/DueLedgerTable';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { TransactionInspector } from './components/TransactionInspector';
+import { MasterBillInspector } from './components/MasterBillInspector';
 import { NewMasterBillModal } from '../modals/NewMasterBillModal';
 import { GenerateTransactionsModal } from '../modals/GenerateTransactionsModal';
 import { FolderSettingsModal } from '../modals/FolderSettingsModal';
 import { getCurrentMonthStr, getCurrentYearStr } from '../utils/dateUtils';
+import { isTablet } from '../utils/domUtils';
 
 export class BillsHubView extends ItemView {
     private indexService: BillIndexService;
@@ -34,7 +37,14 @@ export class BillsHubView extends ItemView {
     private filterOptions: TransactionFilterOptions;
     private masterFilterOptions: MasterFilterOptions;
 
+    // Cockpit Inspector Selection State
+    private selectedTransaction: BillTransaction | null = null;
+    private selectedMasterBill: MasterBill | null = null;
+    private transactionInspector: TransactionInspector | null = null;
+    private masterBillInspector: MasterBillInspector | null = null;
+
     private unsubscribeRefresh?: () => void;
+    private keydownHandler?: (e: KeyboardEvent) => void;
 
     constructor(
         leaf: WorkspaceLeaf,
@@ -81,7 +91,7 @@ export class BillsHubView extends ItemView {
     }
 
     getDisplayText(): string {
-        return 'Wawarts';
+        return 'Wawarts — Dues Cockpit';
     }
 
     getIcon(): string {
@@ -90,8 +100,43 @@ export class BillsHubView extends ItemView {
 
     async onOpen(): Promise<void> {
         this.unsubscribeRefresh = this.refreshCoordinator.subscribe(() => {
+            // Re-resolve selected items from new index to keep active state fresh
+            if (this.selectedTransaction) {
+                const refreshed = this.indexService.getAllTransactions().find(
+                    (t) => t.file.path === this.selectedTransaction?.file.path
+                );
+                this.selectedTransaction = refreshed || null;
+            }
+            if (this.selectedMasterBill) {
+                const refreshedM = this.indexService.getAllMasterBills().find(
+                    (b) => b.file.path === this.selectedMasterBill?.file.path
+                );
+                this.selectedMasterBill = refreshedM || null;
+            }
             this.render();
         });
+
+        // Global view keydown listener (DIWA keyboard shortcuts: '/' for search, 'Escape' to dismiss)
+        this.keydownHandler = (e: KeyboardEvent) => {
+            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            const isEditing = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
+
+            if (e.key === '/' && !isEditing) {
+                e.preventDefault();
+                const searchInput = this.contentEl.querySelector<HTMLInputElement>('.pos-search-input, .bills-table-search-input');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            } else if (e.key === 'Escape') {
+                if (this.selectedTransaction || this.selectedMasterBill) {
+                    this.selectedTransaction = null;
+                    this.selectedMasterBill = null;
+                    this.render();
+                }
+            }
+        };
+        window.addEventListener('keydown', this.keydownHandler);
 
         await this.indexService.buildFullIndex();
         this.render();
@@ -100,6 +145,9 @@ export class BillsHubView extends ItemView {
     async onClose(): Promise<void> {
         if (this.unsubscribeRefresh) {
             this.unsubscribeRefresh();
+        }
+        if (this.keydownHandler) {
+            window.removeEventListener('keydown', this.keydownHandler);
         }
     }
 
@@ -140,28 +188,68 @@ export class BillsHubView extends ItemView {
     public render(): void {
         const { contentEl } = this;
         contentEl.empty();
-        contentEl.addClass('bills-view-root');
+        contentEl.addClass('diwa-workspace-root', 'bills-view-root');
 
-        // 1. Header Row
-        const headerEl = contentEl.createEl('div', { cls: 'bills-header-container' });
-        const titleRow = headerEl.createEl('div', { cls: 'bills-title-row' });
+        const isMobile = Platform.isMobile && !isTablet();
+        if (isMobile) {
+            contentEl.addClass('is-mobile-device');
+        }
 
-        const titleLeft = titleRow.createEl('div', { cls: 'bills-title-left' });
-        const logoIcon = titleLeft.createEl('span', { cls: 'bills-title-icon' });
+        // --- 1. Top Header Bar (DIWA pos-header-bar style) ---
+        const headerEl = contentEl.createEl('div', { cls: 'pos-header-bar bills-header-container' });
+
+        // Left Branding & Subtitle
+        const titleSection = headerEl.createEl('div', { cls: 'pos-header-title-section bills-title-left' });
+        const logoIcon = titleSection.createEl('span', { cls: 'bills-title-icon' });
         setIcon(logoIcon, 'calendar-check-2');
-        titleLeft.createEl('h1', { text: 'Wawarts', cls: 'bills-main-title' });
+        titleSection.createEl('span', { text: 'Wawarts', cls: 'pos-header-logo bills-main-title' });
+        titleSection.createEl('span', { text: 'Personal Dues & Cashflow Cockpit', cls: 'pos-header-subtitle' });
 
-        // Header Right: settings button
-        const titleRight = titleRow.createEl('div', { cls: 'bills-title-right' });
+        // Header Actions (Right)
+        const headerActions = headerEl.createEl('div', { cls: 'pos-header-actions bills-title-right' });
 
-        const settingsBtn = titleRight.createEl('button', {
-            cls: 'clickable-icon bills-header-icon-btn',
-            attr: { 'aria-label': 'Folder Locations & Settings' },
+        // Quick Generator Pill
+        const quickGenBtn = headerActions.createEl('button', {
+            cls: 'pos-header-text-btn mod-cta',
+        });
+        const zapIcon = quickGenBtn.createEl('span', { cls: 'pos-btn-icon' });
+        setIcon(zapIcon, 'sparkles');
+        quickGenBtn.createEl('span', { text: 'Generate Month Dues' });
+        quickGenBtn.addEventListener('click', () => {
+            new GenerateTransactionsModal(
+                this.app,
+                this.vaultService,
+                this.indexService,
+                this.settings,
+                () => this.render()
+            ).open();
+        });
+
+        // Quick New Master Bill Pill
+        const newBillBtn = headerActions.createEl('button', {
+            cls: 'pos-header-text-btn',
+        });
+        const plusIcon = newBillBtn.createEl('span', { cls: 'pos-btn-icon' });
+        setIcon(plusIcon, 'plus');
+        newBillBtn.createEl('span', { text: 'New Master' });
+        newBillBtn.addEventListener('click', () => {
+            new NewMasterBillModal(
+                this.app,
+                this.vaultService,
+                this.settings,
+                () => this.render()
+            ).open();
+        });
+
+        // Settings / More Utility Button
+        const settingsBtn = headerActions.createEl('button', {
+            cls: 'pos-btn-icon bills-header-icon-btn clickable-icon',
+            attr: { 'aria-label': 'Vault Folders & Settings' },
         });
         setIcon(settingsBtn, 'settings');
         settingsBtn.addEventListener('click', () => this.openFolderSettingsModal());
 
-        // 2. Summary KPI Cards
+        // --- 2. Summary KPI Cards ---
         const summaryContainer = contentEl.createEl('div', { cls: 'bills-summary-wrapper' });
         BillsSummaryCards.render(
             summaryContainer,
@@ -182,7 +270,7 @@ export class BillsHubView extends ItemView {
             }
         );
 
-        // 3. Navigation Tabs & Filter Bar
+        // --- 3. Navigation Tabs & Filter Bar ---
         const filterContainer = contentEl.createEl('div', { cls: 'bills-filter-wrapper' });
         BillsFilterBar.render(
             filterContainer,
@@ -191,13 +279,15 @@ export class BillsHubView extends ItemView {
             this.filterOptions,
             (newTab) => {
                 this.activeHubTab = newTab;
+                this.selectedTransaction = null;
+                this.selectedMasterBill = null;
                 this.persistFilters();
                 this.render();
             },
             (newOptions) => {
                 this.filterOptions = newOptions;
                 this.persistFilters();
-                this.renderContent(mainContentContainer);
+                this.renderStage(mainStageContainer, inspectorContainer);
             },
             () => {
                 new GenerateTransactionsModal(
@@ -219,27 +309,93 @@ export class BillsHubView extends ItemView {
             () => this.openFolderSettingsModal()
         );
 
-        // 4. Main Scrollable Content Area
-        const mainContentContainer = contentEl.createEl('div', { cls: 'bills-main-scroll-area' });
-        this.renderContent(mainContentContainer);
+        // --- 4. Dual-Pane Cockpit Main Stage (DIWA Split Layout) ---
+        const cockpitStage = contentEl.createEl('div', { cls: 'wawarts-cockpit-stage' });
+
+        // Left/Center: Main Table / View Area
+        const mainStageContainer = cockpitStage.createEl('div', { cls: 'wawarts-cockpit-table-area' });
+
+        // Right/Drawer: Inspector Container (Desktop Slide-Over Rail / Mobile Bottom Sheet)
+        const inspectorContainer = cockpitStage.createEl('div', { cls: 'wawarts-cockpit-inspector-area' });
+        inspectorContainer.style.display = 'none';
+
+        // Initialize Inspectors
+        this.transactionInspector = new TransactionInspector(
+            this.app,
+            inspectorContainer,
+            this.vaultService,
+            this.settings,
+            () => {
+                this.selectedTransaction = null;
+                this.render();
+            },
+            () => this.render()
+        );
+
+        this.masterBillInspector = new MasterBillInspector(
+            this.app,
+            inspectorContainer,
+            this.vaultService,
+            this.indexService,
+            this.settings,
+            () => {
+                this.selectedMasterBill = null;
+                this.render();
+            },
+            () => this.render()
+        );
+
+        this.renderStage(mainStageContainer, inspectorContainer);
     }
 
-    private renderContent(container: HTMLElement): void {
-        container.empty();
+    private renderStage(mainContainer: HTMLElement, inspectorContainer: HTMLElement): void {
+        mainContainer.empty();
 
         if (this.activeHubTab === 'insights') {
-            AnalyticsDashboard.render(container, this.app, this.indexService, this.settings);
+            inspectorContainer.style.display = 'none';
+            inspectorContainer.removeClass('is-open');
+            AnalyticsDashboard.render(mainContainer, this.app, this.indexService, this.settings);
             return;
         }
 
         if (this.activeHubTab === 'master') {
-            this.renderMasterCatalog(container);
+            MasterCatalogTable.render(
+                mainContainer,
+                this.app,
+                this.indexService,
+                this.vaultService,
+                this.settings,
+                this.masterFilterOptions,
+                (newOpts) => {
+                    this.masterFilterOptions = newOpts;
+                    this.persistFilters();
+                    this.renderStage(mainContainer, inspectorContainer);
+                },
+                () => this.render(),
+                this.selectedMasterBill?.file.path,
+                (selected) => {
+                    this.selectedMasterBill = selected;
+                    if (selected && this.masterBillInspector) {
+                        this.masterBillInspector.inspect(selected);
+                    } else if (this.masterBillInspector) {
+                        this.masterBillInspector.inspect(null);
+                    }
+                    this.renderStage(mainContainer, inspectorContainer);
+                }
+            );
+
+            // Populate inspector if active
+            if (this.selectedMasterBill && this.masterBillInspector) {
+                this.masterBillInspector.inspect(this.selectedMasterBill);
+            } else if (this.masterBillInspector) {
+                this.masterBillInspector.inspect(null);
+            }
             return;
         }
 
-        // Transactions Ledger Tab (Tabular on Desktop, Cards on Mobile):
+        // Transactions Due Ledger Tab:
         DueLedgerTable.render(
-            container,
+            mainContainer,
             this.app,
             this.indexService,
             this.vaultService,
@@ -248,61 +404,26 @@ export class BillsHubView extends ItemView {
             (newOpts) => {
                 this.filterOptions = newOpts;
                 this.persistFilters();
-                this.render();
+                this.renderStage(mainContainer, inspectorContainer);
             },
-            () => this.render()
+            () => this.render(),
+            this.selectedTransaction?.file.path,
+            (selected) => {
+                this.selectedTransaction = selected;
+                if (selected && this.transactionInspector) {
+                    this.transactionInspector.inspect(selected);
+                } else if (this.transactionInspector) {
+                    this.transactionInspector.inspect(null);
+                }
+                this.renderStage(mainContainer, inspectorContainer);
+            }
         );
-    }
 
-    private renderMasterCatalog(container: HTMLElement): void {
-        MasterCatalogTable.render(
-            container,
-            this.app,
-            this.indexService,
-            this.vaultService,
-            this.settings,
-            this.masterFilterOptions,
-            (newOpts) => {
-                this.masterFilterOptions = newOpts;
-                this.persistFilters();
-                this.renderMasterCatalog(container);
-            },
-            () => this.render()
-        );
-    }
-
-    private renderEmptyTransactions(container: HTMLElement): void {
-        const emptyBox = container.createEl('div', { cls: 'bills-empty-state-box' });
-        const icon = emptyBox.createEl('div', { cls: 'bills-empty-icon' });
-        setIcon(icon, 'calendar-check-2');
-
-        const masterBills = this.indexService.getAllMasterBills();
-        if (masterBills.length === 0) {
-            emptyBox.createEl('h3', { text: 'No Master Bills Configured', cls: 'bills-empty-title' });
-            emptyBox.createEl('p', {
-                text: 'First create master bill definitions, then generate due instances for the month.',
-                cls: 'bills-empty-desc',
-            });
-            const addBtn = emptyBox.createEl('button', {
-                text: 'Create Master Bill',
-                cls: 'mod-cta bills-btn-primary',
-            });
-            addBtn.addEventListener('click', () => {
-                new NewMasterBillModal(this.app, this.vaultService, this.settings, () => this.render()).open();
-            });
-        } else {
-            emptyBox.createEl('h3', { text: `No Due Files for ${this.filterOptions.selectedMonth}`, cls: 'bills-empty-title' });
-            emptyBox.createEl('p', {
-                text: `Generate this month's scheduled due files from your master catalog with 1 click.`,
-                cls: 'bills-empty-desc',
-            });
-            const genBtn = emptyBox.createEl('button', {
-                text: `Generate ${this.filterOptions.selectedMonth} Due Files`,
-                cls: 'mod-cta bills-btn-primary',
-            });
-            genBtn.addEventListener('click', () => {
-                new GenerateTransactionsModal(this.app, this.vaultService, this.indexService, this.settings, () => this.render()).open();
-            });
+        // Populate inspector if active
+        if (this.selectedTransaction && this.transactionInspector) {
+            this.transactionInspector.inspect(this.selectedTransaction);
+        } else if (this.transactionInspector) {
+            this.transactionInspector.inspect(null);
         }
     }
 }

@@ -23,11 +23,11 @@ export class BillsSummaryCards {
         const overdue = indexService.getOverdueTransactions();
 
         // 1. Hero Metric: Yearly Percentage Paid
-        const yearlyCard = containerEl.createEl('div', { cls: 'bills-metric-card bills-metric-card--primary' });
+        const yearlyCard = containerEl.createEl('div', { cls: 'bills-metric-card' });
         yearlyCard.createEl('div', { text: `${activeYear} Yearly Completion`, cls: 'bills-metric-label' });
         yearlyCard.createEl('div', {
             text: `${yearlySummary.percentagePaid}% Paid`,
-            cls: 'bills-metric-value bills-metric-value--success',
+            cls: 'bills-metric-value',
         });
         yearlyCard.createEl('div', {
             text: `${yearlySummary.paidCount} of ${yearlySummary.totalBills} bills settled in ${activeYear}`,
@@ -47,7 +47,7 @@ export class BillsSummaryCards {
         });
 
         // 3. Due Soon Card
-        const dueSoonCard = containerEl.createEl('div', { cls: 'bills-metric-card bills-metric-card--warning bills-metric-card--clickable' });
+        const dueSoonCard = containerEl.createEl('div', { cls: 'bills-metric-card bills-metric-card--clickable' });
         dueSoonCard.createEl('div', { text: 'Due Next 7 Days', cls: 'bills-metric-label' });
         dueSoonCard.createEl('div', {
             text: `${dueSoon.length} Bill${dueSoon.length === 1 ? '' : 's'}`,
@@ -61,8 +61,8 @@ export class BillsSummaryCards {
 
         // 4. Overdue or All Caught Up Card
         if (overdue.length > 0) {
-            const overdueCard = containerEl.createEl('div', { cls: 'bills-metric-card bills-metric-card--danger bills-metric-card--clickable' });
-            overdueCard.createEl('div', { text: '⚠️ Overdue Bills', cls: 'bills-metric-label' });
+            const overdueCard = containerEl.createEl('div', { cls: 'bills-metric-card bills-metric-card--clickable' });
+            overdueCard.createEl('div', { text: 'Overdue Bills', cls: 'bills-metric-label' });
             overdueCard.createEl('div', {
                 text: `${overdue.length} Overdue`,
                 cls: 'bills-metric-value',
@@ -77,11 +77,11 @@ export class BillsSummaryCards {
             currentCard.createEl('div', { text: 'Schedule Health', cls: 'bills-metric-label' });
             currentCard.createEl('div', {
                 text: '100% On Schedule',
-                cls: 'bills-metric-value bills-metric-value--success',
+                cls: 'bills-metric-value',
             });
             currentCard.createEl('div', {
                 text: 'Zero overdue bills ✓',
-                cls: 'bills-metric-subtext bills-metric-subtext--success',
+                cls: 'bills-metric-subtext',
             });
         }
     }

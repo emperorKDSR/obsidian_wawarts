@@ -313,6 +313,13 @@ export class BillVaultService {
         await this.updateTransaction(file, { due_date: dueDate });
     }
 
+    async appendNoteToTransaction(file: TFile, noteText: string): Promise<void> {
+        const content = await this.app.vault.read(file);
+        const timestamp = (window as any).moment ? (window as any).moment().format('YYYY-MM-DD HH:mm') : new Date().toISOString().slice(0, 16);
+        const formatted = `\n- **${timestamp}:** ${noteText}`;
+        await this.app.vault.modify(file, content.trimEnd() + '\n' + formatted + '\n');
+    }
+
     async deleteTransaction(file: TFile): Promise<void> {
         await this.app.vault.trash(file, true);
     }

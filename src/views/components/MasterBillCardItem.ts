@@ -2,10 +2,11 @@ import { App, Menu, setIcon, Notice } from 'obsidian';
 import { MasterBill, RecurringBillsSettings } from '../../types';
 import { BillVaultService } from '../../services/BillVaultService';
 import { formatCurrency } from '../../utils/currencyUtils';
-import { FREQUENCY_LABELS, CATEGORY_COLORS } from '../../constants';
+import { FREQUENCY_LABELS } from '../../constants';
 import { getCurrentMonthStr, computeDueDateForMonth } from '../../utils/dateUtils';
 import { EditMasterBillModal } from '../../modals/EditMasterBillModal';
 import { ConfirmModal } from '../../modals/ConfirmModal';
+import { openNoteSafely, attachHoverPreview } from '../../utils/navigationUtils';
 
 export class MasterBillCardItem {
     static render(
@@ -20,16 +21,21 @@ export class MasterBillCardItem {
             cls: `bill-card bill-card--master ${!bill.active ? 'bill-card--paused' : ''}`,
         });
 
-        // Indicator stripe
-        const indicator = card.createEl('div', { cls: 'bill-card-indicator' });
-        indicator.style.backgroundColor = CATEGORY_COLORS[bill.category] || 'var(--interactive-accent)';
-
         // Left Content
         const mainContent = card.createEl('div', { cls: 'bill-card-content' });
 
         const topRow = mainContent.createEl('div', { cls: 'bill-card-toprow' });
         const titleGroup = topRow.createEl('div', { cls: 'bill-card-title-group' });
-        titleGroup.createEl('span', { text: bill.name, cls: 'bill-card-name' });
+        const nameLink = titleGroup.createEl('a', {
+            text: bill.name,
+            cls: 'internal-link bill-card-name',
+        });
+        attachHoverPreview(app, nameLink, bill.filePath, this);
+        nameLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await openNoteSafely(app, bill.file, e);
+        });
 
         if (bill.autoPay) {
             const autoPayBadge = titleGroup.createEl('span', {
@@ -47,10 +53,7 @@ export class MasterBillCardItem {
         const metaRow = mainContent.createEl('div', { cls: 'bill-card-metarow' });
 
         // Category Pill
-        const catColor = CATEGORY_COLORS[bill.category] || 'var(--interactive-accent)';
-        const catPill = metaRow.createEl('span', { text: bill.category, cls: 'bill-badge bill-badge--category' });
-        catPill.style.borderColor = catColor;
-        catPill.style.color = catColor;
+        metaRow.createEl('span', { text: bill.category, cls: 'bill-badge bill-badge--category' });
 
         // Due Day info
         if (bill.dueDay) {
@@ -149,7 +152,7 @@ export class MasterBillCardItem {
                 item.setTitle('Open Master Note')
                     .setIcon('external-link')
                     .onClick(async () => {
-                        await app.workspace.getLeaf(false).openFile(bill.file);
+                        await openNoteSafely(app, bill.file, undefined, { fallbackLeaf: 'split' });
                     });
             });
 

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "deploy": "npm run build && cp main.js manifest.json styles.css /Users/K26/Obsidian/K0000/.obsidian/plugins/wawarts/",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [

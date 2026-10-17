@@ -31,7 +31,7 @@ export class AnalyticsDashboard {
         heroHeader.createEl('h3', { text: `${currentYear} Annual Progress`, cls: 'bills-analytics-card-title' });
         heroHeader.createEl('span', {
             text: `${yearlySummary.percentagePaid}% Paid YTD`,
-            cls: 'bill-badge bill-badge--success bills-hero-badge',
+            cls: 'bill-badge bill-badge--neutral bills-hero-badge',
         });
 
         const heroStatsRow = heroCard.createEl('div', { cls: 'bills-hero-stats-row' });
@@ -43,7 +43,7 @@ export class AnalyticsDashboard {
         const heroTrack = heroCard.createEl('div', { cls: 'bills-progress-track bills-hero-progress-track' });
         const heroFill = heroTrack.createEl('div', { cls: 'bills-progress-fill' });
         heroFill.style.width = `${yearlySummary.percentagePaid}%`;
-        heroFill.style.backgroundColor = 'var(--color-green, #10b981)';
+        heroFill.style.backgroundColor = 'var(--interactive-accent)';
 
         // 2. 12-Month Annual Matrix Grid
         const matrixCard = containerEl.createEl('div', { cls: 'bills-analytics-card' });
@@ -63,7 +63,7 @@ export class AnalyticsDashboard {
                 const miniTrack = mCell.createEl('div', { cls: 'bills-progress-track bills-matrix-track' });
                 const miniFill = miniTrack.createEl('div', { cls: 'bills-progress-fill' });
                 miniFill.style.width = `${m.percentage}%`;
-                miniFill.style.backgroundColor = m.percentage === 100 ? 'var(--color-green, #10b981)' : 'var(--interactive-accent)';
+                miniFill.style.backgroundColor = 'var(--interactive-accent)';
             } else {
                 mCell.createEl('div', { text: '—', cls: 'bills-matrix-empty-text' });
                 mCell.createEl('div', { text: 'No Dues', cls: 'bills-matrix-counts' });
@@ -84,8 +84,7 @@ export class AnalyticsDashboard {
 
                 const labelRow = row.createEl('div', { cls: 'bills-category-row-label' });
                 const leftLabel = labelRow.createEl('div', { cls: 'bills-category-name-group' });
-                const dot = leftLabel.createEl('span', { cls: 'bills-category-dot' });
-                dot.style.backgroundColor = item.color || 'var(--interactive-accent)';
+                leftLabel.createEl('span', { cls: 'bills-category-dot' });
                 leftLabel.createEl('span', { text: item.category, cls: 'bills-category-name' });
                 leftLabel.createEl('span', { text: `(${item.paidCount}/${item.totalCount} Settled)`, cls: 'bills-category-count' });
 
@@ -95,7 +94,7 @@ export class AnalyticsDashboard {
                 const progressTrack = row.createEl('div', { cls: 'bills-progress-track' });
                 const progressBar = progressTrack.createEl('div', { cls: 'bills-progress-fill' });
                 progressBar.style.width = `${item.percentagePaid}%`;
-                progressBar.style.backgroundColor = item.color || 'var(--interactive-accent)';
+                progressBar.style.backgroundColor = 'var(--interactive-accent)';
             }
         } else {
             catList.createEl('div', { text: 'No due instances recorded yet for this year.', cls: 'bills-empty-state-text' });

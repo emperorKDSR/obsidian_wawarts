@@ -3,11 +3,12 @@ import { MasterBill, MasterFilterOptions, MasterSortField, RecurringBillsSetting
 import { BillVaultService } from '../../services/BillVaultService';
 import { BillIndexService } from '../../services/BillIndexService';
 import { formatCurrency } from '../../utils/currencyUtils';
-import { FREQUENCY_LABELS, CATEGORY_COLORS } from '../../constants';
+import { FREQUENCY_LABELS } from '../../constants';
 import { getCurrentMonthStr, computeDueDateForMonth } from '../../utils/dateUtils';
 import { EditMasterBillModal } from '../../modals/EditMasterBillModal';
 import { ConfirmModal } from '../../modals/ConfirmModal';
 import { NewMasterBillModal } from '../../modals/NewMasterBillModal';
+import { openNoteSafely, attachHoverPreview, openNoteActionContextMenu } from '../../utils/navigationUtils';
 
 export class MasterCatalogTable {
     static render(
@@ -18,7 +19,9 @@ export class MasterCatalogTable {
         settings: RecurringBillsSettings,
         filterOptions: MasterFilterOptions,
         onFilterChanged: (newOptions: MasterFilterOptions) => void,
-        onRefreshNeeded: () => void
+        onRefreshNeeded: () => void,
+        selectedMasterId?: string,
+        onSelectMasterBill?: (bill: MasterBill | null) => void
     ): void {
         containerEl.empty();
         containerEl.addClass('bills-master-table-wrapper');
@@ -249,8 +252,25 @@ export class MasterCatalogTable {
         const tbodyEl = tableEl.createEl('tbody');
 
         for (const bill of filtered) {
+            const isSelected = selectedMasterId === bill.file.path;
             const tr = tbodyEl.createEl('tr', {
-                cls: `bills-table-row ${!bill.active ? 'bills-table-row--inactive' : ''}`,
+                cls: `bills-table-row ${!bill.active ? 'bills-table-row--inactive' : ''} ${isSelected ? 'is-selected' : ''}`,
+            });
+
+            // Click row to inspect (DIWA cockpit pattern)
+            tr.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('button, input, select, a, .clickable-icon')) {
+                    return;
+                }
+                if (onSelectMasterBill) {
+                    onSelectMasterBill(isSelected ? null : bill);
+                }
+            });
+
+            // Right-click context menu
+            tr.addEventListener('contextmenu', (e) => {
+                openNoteActionContextMenu(app, e, bill.file);
             });
 
             // 1. Status & AutoPay Indicator (Interactive Toggles)
@@ -287,28 +307,27 @@ export class MasterCatalogTable {
                 onRefreshNeeded();
             });
 
-            // 2. Bill Item Name (Clickable link)
+            // 2. Bill Item Name (Clickable link with leaf safeguarding)
             const tdName = tr.createEl('td', { cls: 'col-name' });
             const nameLink = tdName.createEl('a', {
-                cls: 'bills-table-bill-name',
+                cls: 'internal-link bills-table-bill-name',
                 text: bill.name,
-                attr: { 'aria-label': 'Click to open master note' },
+                attr: { 'aria-label': 'Click to open master note safely' },
             });
-            nameLink.addEventListener('click', (e) => {
+            attachHoverPreview(app, nameLink, bill.filePath, this);
+            nameLink.addEventListener('click', async (e) => {
                 e.preventDefault();
-                app.workspace.openLinkText(bill.filePath, '', false);
+                e.stopPropagation();
+                await openNoteSafely(app, bill.file, e);
             });
 
             // 3. Category (Inline Interactive Dropdown)
             const tdCat = tr.createEl('td', { cls: 'col-category' });
-            const catColor = CATEGORY_COLORS[bill.category] || 'var(--interactive-accent)';
 
             const catSelect = tdCat.createEl('select', {
                 cls: 'dropdown bills-inline-select bills-inline-cat-select',
                 attr: { 'aria-label': 'Change Category' },
             });
-            catSelect.style.borderColor = catColor;
-            catSelect.style.color = catColor;
 
             for (const cat of settings.categories) {
                 const opt = catSelect.createEl('option', { text: cat, value: cat });
@@ -477,6 +496,19 @@ export class MasterCatalogTable {
                 }
             });
 
+            // Inspect Button
+            const inspectBtn = actionsWrap.createEl('button', {
+                cls: `clickable-icon bills-table-icon-btn ${isSelected ? 'is-active' : ''}`,
+                attr: { 'aria-label': 'Inspect master profile' },
+            });
+            setIcon(inspectBtn, 'sidebar-close');
+            inspectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (onSelectMasterBill) {
+                    onSelectMasterBill(isSelected ? null : bill);
+                }
+            });
+
             // Edit Button
             const editBtn = actionsWrap.createEl('button', {
                 cls: 'clickable-icon bills-table-icon-btn',
@@ -496,49 +528,48 @@ export class MasterCatalogTable {
             setIcon(moreBtn, 'more-vertical');
             moreBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const menu = new Menu();
+                openNoteActionContextMenu(app, e, bill.file, (menu) => {
+                    menu.addItem((item) => {
+                        item.setTitle('Edit Profile')
+                            .setIcon('pencil')
+                            .onClick(() => {
+                                new EditMasterBillModal(app, bill, vaultService, settings, onRefreshNeeded).open();
+                            });
+                    });
 
-                menu.addItem((item) => {
-                    item.setTitle('Open Master Note')
-                        .setIcon('external-link')
-                        .onClick(() => {
-                            app.workspace.openLinkText(bill.filePath, '', false);
-                        });
+                    menu.addItem((item) => {
+                        item.setTitle(bill.active ? 'Pause Bill Profile' : 'Resume Bill Profile')
+                            .setIcon(bill.active ? 'pause-circle' : 'play-circle')
+                            .onClick(async () => {
+                                await vaultService.updateMasterBill(bill.file, { active: !bill.active });
+                                new Notice(`${bill.name} is now ${bill.active ? 'paused' : 'active'}.`);
+                                onRefreshNeeded();
+                            });
+                    });
+
+                    menu.addSeparator();
+
+                    menu.addItem((item) => {
+                        item.setTitle('Delete Master Profile')
+                            .setIcon('trash-2')
+                            .setWarning(true)
+                            .onClick(() => {
+                                new ConfirmModal(
+                                    app,
+                                    `Delete Master Bill: "${bill.name}"?`,
+                                    'This will move the master profile to trash. Existing generated transaction files will not be deleted.',
+                                    'Delete Profile',
+                                    true,
+                                    async () => {
+                                        await vaultService.deleteMasterBill(bill.file);
+                                        new Notice(`Deleted ${bill.name}`);
+                                        if (isSelected && onSelectMasterBill) onSelectMasterBill(null);
+                                        onRefreshNeeded();
+                                    }
+                                ).open();
+                            });
+                    });
                 });
-
-                menu.addItem((item) => {
-                    item.setTitle(bill.active ? 'Pause Bill Profile' : 'Resume Bill Profile')
-                        .setIcon(bill.active ? 'pause-circle' : 'play-circle')
-                        .onClick(async () => {
-                            await vaultService.updateMasterBill(bill.file, { active: !bill.active });
-                            new Notice(`${bill.name} is now ${bill.active ? 'paused' : 'active'}.`);
-                            onRefreshNeeded();
-                        });
-                });
-
-                menu.addSeparator();
-
-                menu.addItem((item) => {
-                    item.setTitle('Delete Master Profile')
-                        .setIcon('trash-2')
-                        .setWarning(true)
-                        .onClick(() => {
-                            new ConfirmModal(
-                                app,
-                                `Delete Master Bill: "${bill.name}"?`,
-                                'This will move the master profile to trash. Existing generated transaction files will not be deleted.',
-                                'Delete Profile',
-                                true,
-                                async () => {
-                                    await vaultService.deleteMasterBill(bill.file);
-                                    new Notice(`Deleted ${bill.name}`);
-                                    onRefreshNeeded();
-                                }
-                            ).open();
-                        });
-                });
-
-                menu.showAtMouseEvent(e);
             });
         }
 
@@ -547,6 +578,12 @@ export class MasterCatalogTable {
         for (const bill of filtered) {
             const tile = mobileListContainer.createEl('div', {
                 cls: `bills-mobile-tile ${!bill.active ? 'bills-mobile-tile--paused' : ''}`,
+            });
+
+            tile.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('button, select, input, a, .clickable-icon')) return;
+                if (onSelectMasterBill) onSelectMasterBill(bill);
             });
 
             // Top Row: Status Dot + Name + AutoPay + Category Pill + More Menu
@@ -568,9 +605,12 @@ export class MasterCatalogTable {
             });
 
             // Name
-            const nameEl = topLeft.createEl('span', { text: bill.name, cls: 'bills-mobile-tile-name' });
-            nameEl.addEventListener('click', () => {
-                app.workspace.openLinkText(bill.filePath, '', false);
+            const nameEl = topLeft.createEl('a', { text: bill.name, cls: 'internal-link bills-mobile-tile-name' });
+            attachHoverPreview(app, nameEl, bill.filePath, this);
+            nameEl.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                await openNoteSafely(app, bill.file, e);
             });
 
             if (bill.autoPay) {
@@ -581,13 +621,10 @@ export class MasterCatalogTable {
             const topRight = tileTop.createEl('div', { cls: 'bills-mobile-tile-right' });
             
             // Category Pill
-            const catColor = CATEGORY_COLORS[bill.category] || 'var(--interactive-accent)';
-            const catBadge = topRight.createEl('span', {
+            topRight.createEl('span', {
                 text: bill.category,
                 cls: 'bill-badge bill-badge--category bills-table-badge',
             });
-            catBadge.style.borderColor = catColor;
-            catBadge.style.color = catColor;
 
             // More Menu Button
             const moreBtn = topRight.createEl('button', {

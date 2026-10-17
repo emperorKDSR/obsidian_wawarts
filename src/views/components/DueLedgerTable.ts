@@ -3,12 +3,12 @@ import { BillTransaction, RecurringBillsSettings, TransactionFilterOptions, Tran
 import { BillVaultService } from '../../services/BillVaultService';
 import { BillIndexService } from '../../services/BillIndexService';
 import { formatCurrency } from '../../utils/currencyUtils';
-import { CATEGORY_COLORS } from '../../constants';
 import { getRelativeDueDateLabel } from '../../utils/dateUtils';
 import { PayTransactionModal } from '../../modals/PayTransactionModal';
 import { TransactionDetailsModal } from '../../modals/TransactionDetailsModal';
 import { ConfirmModal } from '../../modals/ConfirmModal';
 import { BillCardItem } from './BillCardItem';
+import { openNoteSafely, attachHoverPreview, openNoteActionContextMenu } from '../../utils/navigationUtils';
 
 export class DueLedgerTable {
     static render(
@@ -19,14 +19,16 @@ export class DueLedgerTable {
         settings: RecurringBillsSettings,
         filterOptions: TransactionFilterOptions,
         onFilterChanged: (newOptions: TransactionFilterOptions) => void,
-        onRefreshNeeded: () => void
+        onRefreshNeeded: () => void,
+        selectedTransactionId?: string,
+        onSelectTransaction?: (trans: BillTransaction | null) => void
     ): void {
         containerEl.empty();
         containerEl.addClass('bills-due-table-wrapper');
 
         const filtered = indexService.getFilteredTransactions(filterOptions);
 
-        // Check if there are overdue items to display banner
+        // Check if there are overdue items to display urgent banner
         const overdue = filtered.filter((t) => t.status === 'overdue' || (t.status === 'pending' && t.daysUntilDue < 0));
         if (overdue.length > 0 && filterOptions.activeTab !== 'overdue') {
             const banner = containerEl.createEl('div', { cls: 'bills-urgent-banner' });
@@ -127,27 +129,64 @@ export class DueLedgerTable {
 
         for (const trans of filtered) {
             const isPaid = trans.status === 'paid';
-            const isOverdue = trans.status === 'overdue' || (trans.status === 'pending' && trans.daysUntilDue < 0);
+            const isOverdue = trans.urgency === 'overdue';
+            const isSelected = selectedTransactionId === trans.file.path;
 
             const tr = tbodyEl.createEl('tr', {
-                cls: `bills-table-row ${isPaid ? 'bills-table-row--paid' : ''} ${isOverdue ? 'bills-table-row--overdue' : ''}`,
+                cls: `bills-table-row ${isPaid ? 'is-paid' : ''} ${isOverdue ? 'is-overdue' : ''} ${isSelected ? 'is-selected' : ''}`,
             });
 
-            // 1. Status & AutoPay Indicator
+            // Click row to inspect (DIWA cockpit pattern)
+            tr.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('button, input, select, a, .clickable-icon')) {
+                    return;
+                }
+                if (onSelectTransaction) {
+                    if (isSelected) {
+                        onSelectTransaction(null);
+                    } else {
+                        onSelectTransaction(trans);
+                    }
+                }
+            });
+
+            // Context menu for the whole row
+            tr.addEventListener('contextmenu', (e) => {
+                openNoteActionContextMenu(app, e, trans.file, (menu) => {
+                    if (isPaid) {
+                        menu.addItem((item) => {
+                            item.setTitle('Mark as Pending')
+                                .setIcon('rotate-ccw')
+                                .onClick(async () => {
+                                    await vaultService.toggleTransactionStatus(trans.file, 'pending');
+                                    new Notice(`Reset ${trans.masterBillName} to pending.`);
+                                    onRefreshNeeded();
+                                });
+                        });
+                    } else {
+                        menu.addItem((item) => {
+                            item.setTitle('Record Payment')
+                                .setIcon('check-circle-2')
+                                .onClick(() => {
+                                    new PayTransactionModal(app, trans, vaultService, settings, onRefreshNeeded).open();
+                                });
+                        });
+                    }
+                });
+            });
+
+            // 1. Status Toggle Column
             const tdStatus = tr.createEl('td', { cls: 'col-status' });
-            const statusWrap = tdStatus.createEl('div', { cls: 'bills-status-cell' });
+            const statusWrap = tdStatus.createEl('div', { cls: 'bills-status-toggle-wrap' });
 
             const statusToggleBtn = statusWrap.createEl('button', {
-                cls: `bills-status-toggle-btn ${isPaid ? 'bills-status-toggle--active' : isOverdue ? 'bills-status-toggle--danger' : 'bills-status-toggle--paused'}`,
-                attr: { 'aria-label': `Status: ${trans.status} (Click to toggle)` },
+                cls: `bills-status-checkbox ${isPaid ? 'is-checked' : ''}`,
+                attr: { 'aria-label': isPaid ? 'Settled (Click to mark pending)' : 'Pending (Click to record payment)' },
             });
-            statusToggleBtn.createEl('span', {
-                cls: `bills-status-dot ${isPaid ? 'bills-status-dot--active' : isOverdue ? 'bills-status-dot--danger' : 'bills-status-dot--paused'}`,
-            });
-            statusToggleBtn.createEl('span', {
-                text: isPaid ? 'Paid' : isOverdue ? 'Overdue' : 'Pending',
-                cls: 'bills-status-toggle-text',
-            });
+
+            const checkIcon = statusToggleBtn.createEl('span', { cls: 'bills-checkbox-icon' });
+            setIcon(checkIcon, isPaid ? 'check' : 'clock');
 
             statusToggleBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -168,28 +207,44 @@ export class DueLedgerTable {
                 setIcon(autoPayChip, 'zap');
             }
 
-            // 2. Bill Item (Clickable Note Link)
+            // 2. Bill Item (Safe Wikilink & Hover Preview)
             const tdName = tr.createEl('td', { cls: 'col-name' });
-            const nameLink = tdName.createEl('a', {
-                cls: 'bills-table-bill-name',
+            const nameWrap = tdName.createEl('div', { cls: 'bills-name-cell-wrap' });
+
+            const nameLink = nameWrap.createEl('a', {
+                cls: 'internal-link bills-table-bill-name',
                 text: trans.masterBillName,
-                attr: { 'aria-label': `Open due file note (${trans.file.basename})` },
+                attr: { 'aria-label': `Open due note safely (${trans.file.name})` },
             });
-            nameLink.addEventListener('click', (e) => {
+            attachHoverPreview(app, nameLink, trans.file.path, this);
+            nameLink.addEventListener('click', async (e) => {
                 e.preventDefault();
-                app.workspace.openLinkText(trans.filePath, '', false);
+                e.stopPropagation();
+                await openNoteSafely(app, trans.file, e);
             });
+
+            // Secondary subtitle showing master ref or file code
+            if (trans.masterBillPath) {
+                const masterSub = nameWrap.createEl('a', {
+                    cls: 'internal-link bills-table-master-sub',
+                    text: `[[${trans.masterBillName}]]`,
+                    attr: { 'aria-label': 'Preview master bill template' },
+                });
+                attachHoverPreview(app, masterSub, trans.masterBillPath, this);
+                masterSub.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await openNoteSafely(app, trans.masterBillPath!, e);
+                });
+            }
 
             // 3. Category (Inline Interactive Select)
             const tdCat = tr.createEl('td', { cls: 'col-category' });
-            const catColor = CATEGORY_COLORS[trans.category] || 'var(--interactive-accent)';
 
             const catSelect = tdCat.createEl('select', {
                 cls: 'dropdown bills-inline-select bills-inline-cat-select',
                 attr: { 'aria-label': 'Change Category' },
             });
-            catSelect.style.borderColor = catColor;
-            catSelect.style.color = catColor;
 
             for (const cat of settings.categories) {
                 const opt = catSelect.createEl('option', { text: cat, value: cat });
@@ -217,7 +272,7 @@ export class DueLedgerTable {
                 cls: 'bills-table-due-date-text',
             });
 
-            const urgencyBadge = dueWrap.createEl('span', {
+            dueWrap.createEl('span', {
                 cls: `bill-badge bill-badge--due-status bill-badge--${isPaid ? 'success' : isOverdue ? 'danger' : trans.urgency === 'due_soon' ? 'warning' : 'neutral'} bills-table-badge`,
                 text: getRelativeDueDateLabel(trans.daysUntilDue, trans.status),
             });
@@ -234,7 +289,7 @@ export class DueLedgerTable {
             });
             amountInput.value = trans.amountDue !== undefined && trans.amountDue > 0 ? String(trans.amountDue) : '';
 
-            const currTag = amountWrap.createEl('span', {
+            amountWrap.createEl('span', {
                 cls: 'bills-inline-currency-tag',
                 text: trans.currency || settings.currencySymbol,
             });
@@ -303,52 +358,48 @@ export class DueLedgerTable {
                     });
                 }
             } else {
-                tdSettled.createEl('span', { text: '—', cls: 'bills-text-muted' });
+                tdSettled.createEl('span', { text: '—', cls: 'bills-table-unsettled-dash' });
             }
 
-            // 8. Actions Cell
+            // 8. Actions Toolbar
             const tdActions = tr.createEl('td', { cls: 'col-actions' });
-            const actionsWrap = tdActions.createEl('div', { cls: 'bills-table-actions-cell' });
+            const actionsWrap = tdActions.createEl('div', { cls: 'bills-table-actions-wrap' });
 
+            // Quick Pay Button
             if (!isPaid) {
-                const payBtn = actionsWrap.createEl('button', {
-                    cls: 'bills-table-action-btn bills-table-btn-cta bills-table-btn-pay',
-                    attr: { 'aria-label': 'Record Bill Payment' },
+                const payActionBtn = actionsWrap.createEl('button', {
+                    cls: 'clickable-icon bills-table-icon-btn bills-action-btn--pay',
+                    attr: { 'aria-label': 'Record payment' },
                 });
-                const payIcon = payBtn.createEl('span', { cls: 'bills-btn-icon' });
-                setIcon(payIcon, 'check-circle-2');
-                payBtn.createEl('span', { text: 'Record Pay' });
-
-                payBtn.addEventListener('click', (e) => {
+                setIcon(payActionBtn, 'check-circle-2');
+                payActionBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     new PayTransactionModal(app, trans, vaultService, settings, onRefreshNeeded).open();
                 });
-            } else {
-                const resetBtn = actionsWrap.createEl('button', {
-                    cls: 'bills-table-action-btn',
-                    attr: { 'aria-label': 'Mark as Pending' },
-                });
-                const resetIcon = resetBtn.createEl('span', { cls: 'bills-btn-icon' });
-                setIcon(resetIcon, 'rotate-ccw');
-                resetBtn.createEl('span', { text: 'Reset' });
-
-                resetBtn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await vaultService.toggleTransactionStatus(trans.file, 'pending');
-                    new Notice(`Reset ${trans.masterBillName} to pending.`);
-                    onRefreshNeeded();
-                });
             }
 
-            // Details Button
+            // Inspect / Details Button
             const detailsBtn = actionsWrap.createEl('button', {
-                cls: 'clickable-icon bills-table-icon-btn',
-                attr: { 'aria-label': 'View details & notes' },
+                cls: `clickable-icon bills-table-icon-btn ${isSelected ? 'is-active' : ''}`,
+                attr: { 'aria-label': 'Inspect details & live notes' },
             });
-            setIcon(detailsBtn, 'file-text');
+            setIcon(detailsBtn, 'sidebar-close');
             detailsBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                new TransactionDetailsModal(app, trans, vaultService, settings, onRefreshNeeded).open();
+                if (onSelectTransaction) {
+                    onSelectTransaction(isSelected ? null : trans);
+                }
+            });
+
+            // Safe External Split Jump
+            const jumpBtn = actionsWrap.createEl('button', {
+                cls: 'clickable-icon bills-table-icon-btn',
+                attr: { 'aria-label': 'Open in adjacent split' },
+            });
+            setIcon(jumpBtn, 'arrow-up-right');
+            jumpBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await openNoteSafely(app, trans.file, e, { fallbackLeaf: 'split' });
             });
 
             // More Menu
@@ -359,49 +410,40 @@ export class DueLedgerTable {
             setIcon(moreBtn, 'more-vertical');
             moreBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const menu = new Menu();
-
-                menu.addItem((item) => {
-                    item.setTitle('Open Transaction Note')
-                        .setIcon('external-link')
-                        .onClick(async () => {
-                            await app.workspace.getLeaf(false).openFile(trans.file);
+                openNoteActionContextMenu(app, e, trans.file, (menu) => {
+                    if (trans.masterBillPath) {
+                        menu.addItem((item) => {
+                            item.setTitle('Open Master Bill Profile')
+                                .setIcon('layers')
+                                .onClick(async () => {
+                                    await openNoteSafely(app, trans.masterBillPath!, undefined, { fallbackLeaf: 'split' });
+                                });
                         });
-                });
+                    }
 
-                if (trans.masterBillPath) {
+                    menu.addSeparator();
+
                     menu.addItem((item) => {
-                        item.setTitle('Open Master Bill Profile')
-                            .setIcon('layers')
+                        item.setTitle('Delete Due File')
+                            .setIcon('trash')
+                            .setWarning(true)
                             .onClick(() => {
-                                app.workspace.openLinkText(trans.masterBillPath!, '', false);
+                                new ConfirmModal(
+                                    app,
+                                    'Delete Due File',
+                                    `Are you sure you want to delete "${trans.file.name}"?`,
+                                    'Delete',
+                                    true,
+                                    async () => {
+                                        await vaultService.deleteTransaction(trans.file);
+                                        new Notice(`Deleted ${trans.file.name}`);
+                                        if (isSelected && onSelectTransaction) onSelectTransaction(null);
+                                        onRefreshNeeded();
+                                    }
+                                ).open();
                             });
                     });
-                }
-
-                menu.addSeparator();
-
-                menu.addItem((item) => {
-                    item.setTitle('Delete Due File')
-                        .setIcon('trash')
-                        .setWarning(true)
-                        .onClick(() => {
-                            new ConfirmModal(
-                                app,
-                                'Delete Due File',
-                                `Are you sure you want to delete "${trans.file.name}"?`,
-                                'Delete',
-                                true,
-                                async () => {
-                                    await vaultService.deleteTransaction(trans.file);
-                                    new Notice(`Deleted ${trans.file.name}`);
-                                    onRefreshNeeded();
-                                }
-                            ).open();
-                        });
                 });
-
-                menu.showAtMouseEvent(e);
             });
         }
 
@@ -410,7 +452,9 @@ export class DueLedgerTable {
         // =========================================================================
         const mobileListContainer = containerEl.createEl('div', { cls: 'bills-due-mobile-list' });
         for (const trans of filtered) {
-            BillCardItem.render(mobileListContainer, app, trans, vaultService, settings, onRefreshNeeded);
+            BillCardItem.render(mobileListContainer, app, trans, vaultService, settings, onRefreshNeeded, () => {
+                if (onSelectTransaction) onSelectTransaction(trans);
+            });
         }
     }
 }
