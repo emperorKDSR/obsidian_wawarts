@@ -104,28 +104,37 @@
 }
 
 .bills-header-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-m, 6px);
-    background: transparent;
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s ease;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 !important;
+    border-radius: var(--diwa-radius-pill, 9999px) !important;
+    background: var(--background-secondary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    transition: var(--diwa-transition, all 0.15s ease) !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
 }
 
 .bills-header-icon-btn:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--interactive-accent);
-    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-hover) !important;
+    color: var(--text-normal) !important;
+    border-color: var(--background-modifier-border-hover, var(--text-muted)) !important;
 }
 
 .bills-header-icon-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 14px !important;
+    height: 14px !important;
 }
 
 .bills-btn-icon-only {
@@ -2315,57 +2324,96 @@
 }
 
 .pos-header-text-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.82rem;
-    font-weight: 500;
-    padding: 0 12px;
-    height: 32px;
-    min-height: 32px;
-    border-radius: var(--diwa-radius-pill);
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: var(--diwa-transition);
-    box-sizing: border-box;
-    line-height: 1;
-    white-space: nowrap;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    padding: 0 14px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    border-radius: var(--diwa-radius-pill, 9999px) !important;
+    background: var(--background-secondary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    color: var(--text-normal) !important;
+    cursor: pointer !important;
+    transition: var(--diwa-transition, all 0.15s ease) !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+    margin: 0 !important;
 }
 
 .pos-header-text-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-    border-color: var(--background-modifier-border-hover, var(--text-muted));
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-normal) !important;
+    border-color: var(--background-modifier-border-hover, var(--text-muted)) !important;
 }
 
 .pos-header-text-btn.mod-cta {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-    border: 1px solid var(--background-modifier-border);
-    font-weight: 600;
+    background: var(--background-secondary) !important;
+    color: var(--text-normal) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    font-weight: 500 !important;
+    padding: 0 14px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    border-radius: var(--diwa-radius-pill, 9999px) !important;
+    box-shadow: none !important;
 }
 
 .pos-header-text-btn.mod-cta:hover {
-    background: var(--background-modifier-active-hover, var(--background-modifier-hover));
-    border-color: var(--text-muted);
+    background: var(--background-modifier-hover) !important;
+    border-color: var(--background-modifier-border-hover, var(--text-muted)) !important;
+}
+
+.pos-header-icon-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 !important;
+    border-radius: var(--diwa-radius-pill, 9999px) !important;
+    background: var(--background-secondary) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    transition: var(--diwa-transition, all 0.15s ease) !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+}
+
+.pos-header-icon-btn:hover {
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-normal) !important;
+    border-color: var(--background-modifier-border-hover, var(--text-muted)) !important;
 }
 
 .pos-btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    color: var(--text-muted) !important;
 }
 
 .pos-btn-icon svg {
-    width: 14px;
-    height: 14px;
-    stroke-width: 2px;
-    stroke: currentColor;
-    flex-shrink: 0;
+    width: 14px !important;
+    height: 14px !important;
+    stroke-width: 2px !important;
+    stroke: currentColor !important;
+    flex-shrink: 0 !important;
 }
 
 .pos-search-container {

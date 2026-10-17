@@ -67,18 +67,18 @@ export class BillsFilterBar {
 
         // Generate Monthly Bills Button
         const genBtn = actionGroup.createEl('button', {
-            cls: 'mod-cta bills-btn-primary bills-gen-btn pos-header-text-btn',
+            cls: 'pos-header-text-btn',
         });
-        const zapIcon = genBtn.createEl('span', { cls: 'bills-btn-icon' });
+        const zapIcon = genBtn.createEl('span', { cls: 'pos-btn-icon' });
         setIcon(zapIcon, 'sparkles');
         genBtn.createEl('span', { text: 'Generate Due Files' });
         genBtn.addEventListener('click', onOpenGenerateModal);
 
         // Add Master Bill Button
         const addMasterBtn = actionGroup.createEl('button', {
-            cls: 'bills-btn-secondary pos-header-text-btn',
+            cls: 'pos-header-text-btn',
         });
-        const plusIcon = addMasterBtn.createEl('span', { cls: 'bills-btn-icon' });
+        const plusIcon = addMasterBtn.createEl('span', { cls: 'pos-btn-icon' });
         setIcon(plusIcon, 'plus');
         addMasterBtn.createEl('span', { text: 'New Master Bill' });
         addMasterBtn.addEventListener('click', onOpenNewMasterModal);
@@ -86,11 +86,10 @@ export class BillsFilterBar {
         // Folder & Settings Button
         if (onOpenSettingsModal) {
             const settingsBtn = actionGroup.createEl('button', {
-                cls: 'bills-btn-secondary bills-btn-icon-only clickable-icon',
+                cls: 'pos-header-icon-btn clickable-icon',
                 attr: { 'aria-label': 'Folder Locations & Settings' },
             });
-            const settingsIcon = settingsBtn.createEl('span', { cls: 'bills-btn-icon' });
-            setIcon(settingsIcon, 'settings');
+            setIcon(settingsBtn, 'settings');
             settingsBtn.addEventListener('click', onOpenSettingsModal);
         }
 

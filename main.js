@@ -1047,26 +1047,25 @@ var BillsFilterBar = class {
     }
     const actionGroup = topRow.createEl("div", { cls: "bills-filter-actions-group" });
     const genBtn = actionGroup.createEl("button", {
-      cls: "mod-cta bills-btn-primary bills-gen-btn pos-header-text-btn"
+      cls: "pos-header-text-btn"
     });
-    const zapIcon = genBtn.createEl("span", { cls: "bills-btn-icon" });
+    const zapIcon = genBtn.createEl("span", { cls: "pos-btn-icon" });
     (0, import_obsidian5.setIcon)(zapIcon, "sparkles");
     genBtn.createEl("span", { text: "Generate Due Files" });
     genBtn.addEventListener("click", onOpenGenerateModal);
     const addMasterBtn = actionGroup.createEl("button", {
-      cls: "bills-btn-secondary pos-header-text-btn"
+      cls: "pos-header-text-btn"
     });
-    const plusIcon = addMasterBtn.createEl("span", { cls: "bills-btn-icon" });
+    const plusIcon = addMasterBtn.createEl("span", { cls: "pos-btn-icon" });
     (0, import_obsidian5.setIcon)(plusIcon, "plus");
     addMasterBtn.createEl("span", { text: "New Master Bill" });
     addMasterBtn.addEventListener("click", onOpenNewMasterModal);
     if (onOpenSettingsModal) {
       const settingsBtn = actionGroup.createEl("button", {
-        cls: "bills-btn-secondary bills-btn-icon-only clickable-icon",
+        cls: "pos-header-icon-btn clickable-icon",
         attr: { "aria-label": "Folder Locations & Settings" }
       });
-      const settingsIcon = settingsBtn.createEl("span", { cls: "bills-btn-icon" });
-      (0, import_obsidian5.setIcon)(settingsIcon, "settings");
+      (0, import_obsidian5.setIcon)(settingsBtn, "settings");
       settingsBtn.addEventListener("click", onOpenSettingsModal);
     }
     if (currentTab === "transactions") {
@@ -3866,7 +3865,7 @@ var BillsHubView = class extends import_obsidian20.ItemView {
     titleSection.createEl("span", { text: "Personal Dues & Cashflow Cockpit", cls: "pos-header-subtitle" });
     const headerActions = headerEl.createEl("div", { cls: "pos-header-actions bills-title-right" });
     const quickGenBtn = headerActions.createEl("button", {
-      cls: "pos-header-text-btn mod-cta"
+      cls: "pos-header-text-btn"
     });
     const zapIcon = quickGenBtn.createEl("span", { cls: "pos-btn-icon" });
     (0, import_obsidian20.setIcon)(zapIcon, "sparkles");
@@ -3895,7 +3894,7 @@ var BillsHubView = class extends import_obsidian20.ItemView {
       ).open();
     });
     const settingsBtn = headerActions.createEl("button", {
-      cls: "pos-btn-icon bills-header-icon-btn clickable-icon",
+      cls: "pos-header-icon-btn clickable-icon",
       attr: { "aria-label": "Vault Folders & Settings" }
     });
     (0, import_obsidian20.setIcon)(settingsBtn, "settings");

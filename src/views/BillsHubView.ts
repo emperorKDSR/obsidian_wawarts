@@ -210,7 +210,7 @@ export class BillsHubView extends ItemView {
 
         // Quick Generator Pill
         const quickGenBtn = headerActions.createEl('button', {
-            cls: 'pos-header-text-btn mod-cta',
+            cls: 'pos-header-text-btn',
         });
         const zapIcon = quickGenBtn.createEl('span', { cls: 'pos-btn-icon' });
         setIcon(zapIcon, 'sparkles');
@@ -243,7 +243,7 @@ export class BillsHubView extends ItemView {
 
         // Settings / More Utility Button
         const settingsBtn = headerActions.createEl('button', {
-            cls: 'pos-btn-icon bills-header-icon-btn clickable-icon',
+            cls: 'pos-header-icon-btn clickable-icon',
             attr: { 'aria-label': 'Vault Folders & Settings' },
         });
         setIcon(settingsBtn, 'settings');
