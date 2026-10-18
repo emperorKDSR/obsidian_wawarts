@@ -94,6 +94,7 @@ export const DEFAULT_SETTINGS: RecurringBillsSettings = {
         sortAsc: true,
     },
     savedActiveHubTab: 'transactions',
+    hideObsidianMobileNavbar: true,
 };
 
 export const FREQUENCY_LABELS: Record<BillFrequency, string> = {

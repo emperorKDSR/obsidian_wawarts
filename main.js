@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => RecurringBillsPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian22 = require("obsidian");
+var import_obsidian25 = require("obsidian");
 
 // src/constants.ts
 var PLUGIN_NAME = "Wawarts";
@@ -110,7 +110,8 @@ var DEFAULT_SETTINGS = {
     sortBy: "dueDay",
     sortAsc: true
   },
-  savedActiveHubTab: "transactions"
+  savedActiveHubTab: "transactions",
+  hideObsidianMobileNavbar: true
 };
 var FREQUENCY_LABELS = {
   weekly: "Weekly",
@@ -932,73 +933,70 @@ var RefreshCoordinator = class {
 };
 
 // src/views/BillsHubView.ts
-var import_obsidian20 = require("obsidian");
+var import_obsidian23 = require("obsidian");
 
 // src/views/components/BillsSummaryCards.ts
 var BillsSummaryCards = class {
-  static render(containerEl, indexService, settings, selectedMonth, onOverdueClick, onPendingClick) {
+  static render(containerEl, indexService, settings, selectedMonth, activeFilterTab, onOverdueClick, onPendingClick, onSettledClick) {
     containerEl.empty();
     containerEl.addClass("bills-summary-grid");
     const activeMonth = selectedMonth && selectedMonth !== "all" ? selectedMonth : getCurrentMonthStr();
-    const activeYear = activeMonth.substring(0, 4) || getCurrentYearStr();
-    const yearlySummary = indexService.getYearlySummary(activeYear);
     const monthSummary = indexService.getMonthSummary(activeMonth);
-    const dueSoon = indexService.getDueSoonTransactions(7);
     const overdue = indexService.getOverdueTransactions();
-    const yearlyCard = containerEl.createEl("div", { cls: "bills-metric-card" });
-    yearlyCard.createEl("div", { text: `${activeYear} Yearly Completion`, cls: "bills-metric-label" });
-    yearlyCard.createEl("div", {
-      text: `${yearlySummary.percentagePaid}% Paid`,
+    const dueIn3Days = indexService.getDueSoonTransactions(3);
+    const totalBills = monthSummary.totalBills;
+    const paidCount = monthSummary.paidCount;
+    const percentagePaid = monthSummary.percentagePaid;
+    const isSettledActive = activeFilterTab === "paid";
+    const settledCard = containerEl.createEl("div", {
+      cls: `bills-metric-card ${onSettledClick ? "bills-metric-card--clickable" : ""} ${isSettledActive ? "bills-metric-card--active" : ""}`,
+      attr: { "aria-label": `${percentagePaid}% Settled (${paidCount} of ${totalBills} bills)` }
+    });
+    settledCard.createEl("div", { text: "% Settled", cls: "bills-metric-label" });
+    settledCard.createEl("div", {
+      text: `${percentagePaid}%`,
       cls: "bills-metric-value"
     });
-    yearlyCard.createEl("div", {
-      text: `${yearlySummary.paidCount} of ${yearlySummary.totalBills} bills settled in ${activeYear}`,
+    settledCard.createEl("div", {
+      text: `${paidCount} of ${totalBills}`,
       cls: "bills-metric-subtext"
     });
-    const monthCard = containerEl.createEl("div", { cls: "bills-metric-card" });
-    monthCard.createEl("div", { text: `${activeMonth} Status`, cls: "bills-metric-label" });
-    monthCard.createEl("div", {
-      text: `${monthSummary.percentagePaid}% Settled`,
+    if (onSettledClick) {
+      settledCard.addEventListener("click", onSettledClick);
+    }
+    const isOverdueActive = activeFilterTab === "overdue";
+    const overdueCard = containerEl.createEl("div", {
+      cls: `bills-metric-card ${onOverdueClick ? "bills-metric-card--clickable" : ""} ${isOverdueActive ? "bills-metric-card--active" : ""} ${overdue.length > 0 ? "bills-metric-card--alert" : ""}`,
+      attr: { "aria-label": `${overdue.length} Overdue Bills` }
+    });
+    overdueCard.createEl("div", { text: "Overdue", cls: "bills-metric-label" });
+    overdueCard.createEl("div", {
+      text: String(overdue.length),
       cls: "bills-metric-value"
     });
-    monthCard.createEl("div", {
-      text: `${monthSummary.paidCount} paid, ${monthSummary.pendingCount} pending`,
+    overdueCard.createEl("div", {
+      text: overdue.length > 0 ? overdue.length === 1 ? "1 Bill" : `${overdue.length} Bills` : "All Clear",
       cls: "bills-metric-subtext"
     });
-    const dueSoonCard = containerEl.createEl("div", { cls: "bills-metric-card bills-metric-card--clickable" });
-    dueSoonCard.createEl("div", { text: "Due Next 7 Days", cls: "bills-metric-label" });
+    if (onOverdueClick) {
+      overdueCard.addEventListener("click", onOverdueClick);
+    }
+    const isDueSoonActive = activeFilterTab === "pending";
+    const dueSoonCard = containerEl.createEl("div", {
+      cls: `bills-metric-card ${onPendingClick ? "bills-metric-card--clickable" : ""} ${isDueSoonActive ? "bills-metric-card--active" : ""}`,
+      attr: { "aria-label": `${dueIn3Days.length} Bills Due Next 3 Days` }
+    });
+    dueSoonCard.createEl("div", { text: "Due in 3d", cls: "bills-metric-label" });
     dueSoonCard.createEl("div", {
-      text: `${dueSoon.length} Bill${dueSoon.length === 1 ? "" : "s"}`,
+      text: String(dueIn3Days.length),
       cls: "bills-metric-value"
     });
     dueSoonCard.createEl("div", {
-      text: dueSoon.length > 0 ? "Upcoming due dates approaching" : "No bills due this week",
+      text: dueIn3Days.length > 0 ? dueIn3Days.length === 1 ? "1 Bill" : `${dueIn3Days.length} Bills` : "None",
       cls: "bills-metric-subtext"
     });
-    if (onPendingClick) dueSoonCard.addEventListener("click", onPendingClick);
-    if (overdue.length > 0) {
-      const overdueCard = containerEl.createEl("div", { cls: "bills-metric-card bills-metric-card--clickable" });
-      overdueCard.createEl("div", { text: "Overdue Bills", cls: "bills-metric-label" });
-      overdueCard.createEl("div", {
-        text: `${overdue.length} Overdue`,
-        cls: "bills-metric-value"
-      });
-      overdueCard.createEl("div", {
-        text: "Action required on past due bills",
-        cls: "bills-metric-subtext"
-      });
-      if (onOverdueClick) overdueCard.addEventListener("click", onOverdueClick);
-    } else {
-      const currentCard = containerEl.createEl("div", { cls: "bills-metric-card" });
-      currentCard.createEl("div", { text: "Schedule Health", cls: "bills-metric-label" });
-      currentCard.createEl("div", {
-        text: "100% On Schedule",
-        cls: "bills-metric-value"
-      });
-      currentCard.createEl("div", {
-        text: "Zero overdue bills \u2713",
-        cls: "bills-metric-subtext"
-      });
+    if (onPendingClick) {
+      dueSoonCard.addEventListener("click", onPendingClick);
     }
   }
 };
@@ -2273,7 +2271,7 @@ var MasterCatalogTable = class {
 };
 
 // src/views/components/DueLedgerTable.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 
 // src/modals/PayTransactionModal.ts
 var import_obsidian11 = require("obsidian");
@@ -2380,13 +2378,148 @@ var PayTransactionModal = class extends import_obsidian11.Modal {
   }
 };
 
-// src/views/components/BillCardItem.ts
+// src/modals/GenerateTransactionsModal.ts
 var import_obsidian12 = require("obsidian");
+var GenerateTransactionsModal = class extends import_obsidian12.Modal {
+  constructor(app, vaultService, indexService, settings, onGenerated, initialTargetMonth) {
+    var _a;
+    super(app);
+    this.selectedMasterBills = /* @__PURE__ */ new Set();
+    this.amountOverrides = /* @__PURE__ */ new Map();
+    this.appInstance = app;
+    this.vaultService = vaultService;
+    this.indexService = indexService;
+    this.settings = settings;
+    this.onGenerated = onGenerated;
+    this.targetMonth = initialTargetMonth || getCurrentMonthStr();
+    for (const bill of indexService.getAllMasterBills().filter((b) => b.active)) {
+      this.selectedMasterBills.add(bill.id);
+      this.amountOverrides.set(bill.id, (_a = bill.defaultAmount) != null ? _a : 0);
+    }
+  }
+  onOpen() {
+    const { contentEl, modalEl } = this;
+    modalEl.addClass("bills-modal", "bills-modal--generate");
+    contentEl.empty();
+    const headerEl = contentEl.createEl("div", { cls: "bills-modal-header" });
+    headerEl.createEl("h2", { text: "Generate Monthly Bill Due Files", cls: "bills-modal-title" });
+    headerEl.createEl("p", {
+      text: "Creates individual transactional markdown notes for each selected master bill for the target month.",
+      cls: "bills-modal-desc"
+    });
+    const bodyEl = contentEl.createEl("div", { cls: "bills-modal-body" });
+    new import_obsidian12.Setting(bodyEl).setName("Target Month").setDesc("Select billing month (YYYY-MM)").addText((text) => {
+      text.inputEl.type = "month";
+      text.setValue(this.targetMonth);
+      text.onChange((val) => {
+        this.targetMonth = val;
+        this.renderBillList(tableContainer);
+      });
+    });
+    const listHeader = bodyEl.createEl("div", { cls: "bills-gen-list-header" });
+    listHeader.createEl("h3", { text: "Master Bills to Generate", cls: "bills-gen-list-title" });
+    const selectAllBtn = listHeader.createEl("button", { text: "Toggle All", cls: "bills-btn-secondary" });
+    selectAllBtn.addEventListener("click", () => {
+      const allActive = this.indexService.getAllMasterBills().filter((b) => b.active);
+      if (this.selectedMasterBills.size === allActive.length) {
+        this.selectedMasterBills.clear();
+      } else {
+        for (const b of allActive) this.selectedMasterBills.add(b.id);
+      }
+      this.renderBillList(tableContainer);
+    });
+    const tableContainer = bodyEl.createEl("div", { cls: "bills-gen-table-container" });
+    this.renderBillList(tableContainer);
+    const footerEl = contentEl.createEl("div", { cls: "bills-modal-footer" });
+    const cancelBtn = footerEl.createEl("button", { text: "Cancel", cls: "mod-cancel" });
+    cancelBtn.addEventListener("click", () => this.close());
+    const generateBtn = footerEl.createEl("button", {
+      text: `Generate Bills`,
+      cls: "mod-cta bills-btn-primary"
+    });
+    generateBtn.addEventListener("click", () => this.handleGenerate());
+  }
+  renderBillList(container) {
+    var _a;
+    container.empty();
+    const activeBills = this.indexService.getAllMasterBills().filter((b) => b.active);
+    if (activeBills.length === 0) {
+      container.createEl("div", {
+        text: "No active master bills found. Please create master bills first.",
+        cls: "bills-empty-state-text"
+      });
+      return;
+    }
+    for (const bill of activeBills) {
+      const isChecked = this.selectedMasterBills.has(bill.id);
+      const computedDueDate = computeDueDateForMonth(this.targetMonth, bill.dueDay, bill.frequency);
+      const currentAmount = (_a = this.amountOverrides.get(bill.id)) != null ? _a : bill.defaultAmount;
+      const row = container.createEl("div", {
+        cls: `bills-gen-row ${isChecked ? "bills-gen-row--selected" : ""}`
+      });
+      const checkbox = row.createEl("input", { type: "checkbox" });
+      checkbox.checked = isChecked;
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          this.selectedMasterBills.add(bill.id);
+          row.addClass("bills-gen-row--selected");
+        } else {
+          this.selectedMasterBills.delete(bill.id);
+          row.removeClass("bills-gen-row--selected");
+        }
+      });
+      const infoGroup = row.createEl("div", { cls: "bills-gen-info" });
+      infoGroup.createEl("div", { text: bill.name, cls: "bills-gen-name" });
+      infoGroup.createEl("div", {
+        text: `Scheduled Due: ${computedDueDate} (${bill.category})`,
+        cls: "bills-gen-meta"
+      });
+      const amountWrapper = row.createEl("div", { cls: "bills-gen-amount-wrapper" });
+      amountWrapper.createEl("span", { text: this.settings.currencySymbol, cls: "bills-gen-currency" });
+      const amountInput = amountWrapper.createEl("input", {
+        type: "text",
+        cls: "bills-gen-amount-input"
+      });
+      amountInput.value = String(currentAmount);
+      amountInput.addEventListener("input", () => {
+        const parsed = parseFloat(amountInput.value.replace(/[^0-9.-]/g, ""));
+        this.amountOverrides.set(bill.id, isNaN(parsed) ? 0 : parsed);
+      });
+    }
+  }
+  async handleGenerate() {
+    if (!this.targetMonth) {
+      new import_obsidian12.Notice("Please select a target month.");
+      return;
+    }
+    const activeBills = this.indexService.getAllMasterBills().filter((b) => b.active);
+    const selected = activeBills.filter((b) => this.selectedMasterBills.has(b.id));
+    if (selected.length === 0) {
+      new import_obsidian12.Notice("Please select at least one bill to generate.");
+      return;
+    }
+    try {
+      const files = await this.vaultService.batchGenerateMonthTransactions(selected, {
+        targetMonth: this.targetMonth,
+        selectedMasterIds: Array.from(this.selectedMasterBills)
+      });
+      new import_obsidian12.Notice(`Generated ${files.length} bill due files for ${this.targetMonth}`);
+      this.close();
+      if (this.onGenerated) this.onGenerated();
+    } catch (e) {
+      console.error("Failed to generate transaction files:", e);
+      new import_obsidian12.Notice("Error generating transaction files.");
+    }
+  }
+};
+
+// src/views/components/BillCardItem.ts
+var import_obsidian13 = require("obsidian");
 var BillCardItem = class {
   static render(containerEl, app, transaction, vaultService, settings, onRefreshNeeded, onSelect) {
     const isPaid = transaction.status === "paid";
     const card = containerEl.createEl("div", {
-      cls: `bill-card bill-card--${transaction.urgency} ${isPaid ? "bill-card--paid" : ""}`
+      cls: `bill-card bill-card--compact bill-card--${transaction.urgency} ${isPaid ? "bill-card--paid" : ""}`
     });
     card.addEventListener("click", (e) => {
       const target = e.target;
@@ -2398,101 +2531,12 @@ var BillCardItem = class {
       }
     });
     card.addEventListener("contextmenu", (e) => {
-      openNoteActionContextMenu(app, e, transaction.file);
-    });
-    const mainContent = card.createEl("div", { cls: "bill-card-content" });
-    const topRow = mainContent.createEl("div", { cls: "bill-card-toprow" });
-    const titleGroup = topRow.createEl("div", { cls: "bill-card-title-group" });
-    const nameLink = titleGroup.createEl("a", {
-      text: transaction.masterBillName,
-      cls: "internal-link bill-card-name"
-    });
-    attachHoverPreview(app, nameLink, transaction.file.path, this);
-    nameLink.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await openNoteSafely(app, transaction.file, e);
-    });
-    if (transaction.autoPay) {
-      const autoPayBadge = titleGroup.createEl("span", {
-        cls: "bill-card-autopay-icon",
-        attr: { "aria-label": "Auto-Pay Active" }
-      });
-      (0, import_obsidian12.setIcon)(autoPayBadge, "zap");
-    }
-    const metaRow = mainContent.createEl("div", { cls: "bill-card-metarow" });
-    metaRow.createEl("span", { text: transaction.category, cls: "bill-badge bill-badge--category" });
-    if (isPaid && transaction.paidDate) {
-      metaRow.createEl("span", {
-        text: `Settled on ${transaction.paidDate} \u2713`,
-        cls: "bill-badge bill-badge--success"
-      });
-    } else {
-      metaRow.createEl("span", {
-        text: `Due: ${transaction.dueDate}`,
-        cls: "bill-card-due-date"
-      });
-    }
-    if (transaction.paymentMethod) {
-      metaRow.createEl("span", {
-        text: transaction.paymentMethod,
-        cls: "bill-badge bill-badge--neutral bill-badge--method"
-      });
-    }
-    const rightSection = card.createEl("div", { cls: "bill-card-right-section" });
-    const priceBlock = rightSection.createEl("div", { cls: "bill-card-price-block" });
-    if (transaction.amountDue !== void 0 && transaction.amountDue > 0) {
-      const amountEl = priceBlock.createEl("div", { cls: "bill-card-amount" });
-      amountEl.createEl("span", {
-        text: formatCurrency(transaction.amountDue, transaction.currency || settings.currencySymbol, settings.currencyCode),
-        cls: "bill-card-amount-number"
-      });
-    }
-    const dueStatusBadge = priceBlock.createEl("div", {
-      cls: `bill-badge bill-badge--due-status bill-badge--${isPaid ? "success" : transaction.urgency === "overdue" ? "danger" : transaction.urgency === "due_soon" ? "warning" : "neutral"}`
-    });
-    dueStatusBadge.setText(getRelativeDueDateLabel(transaction.daysUntilDue, transaction.status));
-    const actionsGroup = rightSection.createEl("div", { cls: "bill-card-actions-group" });
-    if (!isPaid) {
-      const payBtn = actionsGroup.createEl("button", {
-        text: "Pay",
-        cls: "bills-btn-action bills-btn-pay",
-        attr: { "aria-label": "Record payment" }
-      });
-      const payIcon = payBtn.createEl("span", { cls: "bills-btn-icon" });
-      (0, import_obsidian12.setIcon)(payIcon, "check-circle-2");
-      payBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        new PayTransactionModal(app, transaction, vaultService, settings, onRefreshNeeded).open();
-      });
-    }
-    const inspectBtn = actionsGroup.createEl("button", {
-      cls: "bills-btn-action bills-btn-more",
-      attr: { "aria-label": "Inspect details" }
-    });
-    (0, import_obsidian12.setIcon)(inspectBtn, "sidebar-close");
-    inspectBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (onSelect) onSelect();
-    });
-    const moreBtn = actionsGroup.createEl("button", {
-      cls: "bills-btn-action bills-btn-more",
-      attr: { "aria-label": "Options" }
-    });
-    (0, import_obsidian12.setIcon)(moreBtn, "more-vertical");
-    moreBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
       openNoteActionContextMenu(app, e, transaction.file, (menu) => {
-        menu.addItem((item) => {
-          item.setTitle("Inspect in Drawer").setIcon("sidebar-close").onClick(() => {
-            if (onSelect) onSelect();
-          });
-        });
         if (isPaid) {
           menu.addItem((item) => {
             item.setTitle("Mark as Pending").setIcon("rotate-ccw").onClick(async () => {
               await vaultService.toggleTransactionStatus(transaction.file, "pending");
-              new import_obsidian12.Notice(`Reset ${transaction.masterBillName} to pending.`);
+              new import_obsidian13.Notice(`Reset ${transaction.masterBillName} to pending.`);
               onRefreshNeeded();
             });
           });
@@ -2514,7 +2558,7 @@ var BillCardItem = class {
               true,
               async () => {
                 await vaultService.deleteTransaction(transaction.file);
-                new import_obsidian12.Notice(`Deleted ${transaction.file.name}`);
+                new import_obsidian13.Notice(`Deleted ${transaction.file.name}`);
                 onRefreshNeeded();
               }
             ).open();
@@ -2522,6 +2566,72 @@ var BillCardItem = class {
         });
       });
     });
+    const leftCol = card.createEl("div", { cls: "bill-card-left" });
+    const primaryRow = leftCol.createEl("div", { cls: "bill-card-primary-row" });
+    const nameLink = primaryRow.createEl("span", {
+      text: transaction.masterBillName,
+      cls: "bill-card-name"
+    });
+    attachHoverPreview(app, nameLink, transaction.file.path, this);
+    if (transaction.autoPay) {
+      const autoPayBadge = primaryRow.createEl("span", {
+        cls: "bill-card-autopay-icon",
+        attr: { "aria-label": "Auto-Pay Active" }
+      });
+      (0, import_obsidian13.setIcon)(autoPayBadge, "zap");
+    }
+    const secondaryRow = leftCol.createEl("div", { cls: "bill-card-secondary-row" });
+    const metaParts = [];
+    if (isPaid) {
+      metaParts.push(transaction.paidDate ? `Settled ${transaction.paidDate}` : "Settled");
+    } else {
+      metaParts.push(`Due ${transaction.dueDate}`);
+    }
+    if (transaction.category) {
+      metaParts.push(transaction.category);
+    }
+    if (transaction.paymentMethod) {
+      metaParts.push(transaction.paymentMethod);
+    }
+    secondaryRow.createEl("span", {
+      text: metaParts.join(" \u2022 "),
+      cls: "bill-card-meta-text"
+    });
+    const rightCol = card.createEl("div", { cls: "bill-card-right" });
+    const amountEl = rightCol.createEl("div", { cls: "bill-card-amount" });
+    if (transaction.amountDue !== void 0 && transaction.amountDue > 0) {
+      amountEl.createEl("span", {
+        text: formatCurrency(transaction.amountDue, transaction.currency || settings.currencySymbol, settings.currencyCode),
+        cls: "bill-card-amount-number"
+      });
+    } else {
+      amountEl.createEl("span", {
+        text: "\u2014",
+        cls: "bill-card-amount-empty"
+      });
+    }
+    const statusRow = rightCol.createEl("div", { cls: "bill-card-status-row" });
+    if (isPaid) {
+      statusRow.createEl("span", {
+        text: "\u2713 Settled",
+        cls: "bill-card-status-text is-paid"
+      });
+    } else if (transaction.urgency === "overdue") {
+      statusRow.createEl("span", {
+        text: "Overdue",
+        cls: "bill-card-status-badge is-overdue"
+      });
+    } else if (transaction.urgency === "due_soon" || transaction.urgency === "due_today") {
+      statusRow.createEl("span", {
+        text: getRelativeDueDateLabel(transaction.daysUntilDue, transaction.status),
+        cls: "bill-card-status-badge is-due-soon"
+      });
+    } else {
+      statusRow.createEl("span", {
+        text: getRelativeDueDateLabel(transaction.daysUntilDue, transaction.status),
+        cls: "bill-card-status-text"
+      });
+    }
     return card;
   }
 };
@@ -2532,28 +2642,47 @@ var DueLedgerTable = class {
     containerEl.empty();
     containerEl.addClass("bills-due-table-wrapper");
     const filtered = indexService.getFilteredTransactions(filterOptions);
-    const overdue = filtered.filter((t) => t.status === "overdue" || t.status === "pending" && t.daysUntilDue < 0);
-    if (overdue.length > 0 && filterOptions.activeTab !== "overdue") {
-      const banner = containerEl.createEl("div", { cls: "bills-urgent-banner" });
-      const bIcon = banner.createEl("span", { cls: "bills-urgent-icon" });
-      (0, import_obsidian13.setIcon)(bIcon, "alert-triangle");
-      banner.createEl("span", {
-        text: `${overdue.length} overdue bill${overdue.length === 1 ? "" : "s"} require payment action.`,
-        cls: "bills-urgent-text"
+    if (filterOptions.activeTab && filterOptions.activeTab !== "all") {
+      const filterBar = containerEl.createEl("div", { cls: "bills-active-filter-bar" });
+      const filterName = filterOptions.activeTab === "overdue" ? "Overdue" : filterOptions.activeTab === "paid" ? "Settled" : "Due Soon";
+      filterBar.createEl("span", {
+        text: `Filtered: ${filterName} (${filtered.length})`,
+        cls: "bills-active-filter-label"
       });
-      const filterOverdueBtn = banner.createEl("button", {
-        text: "Filter Overdue",
-        cls: "bills-urgent-btn"
+      const showAllBtn = filterBar.createEl("button", {
+        text: "Show All",
+        cls: "bills-active-filter-btn"
       });
-      filterOverdueBtn.addEventListener("click", () => {
-        filterOptions.activeTab = "overdue";
+      const resetIcon = showAllBtn.createSpan({ cls: "bills-btn-icon" });
+      (0, import_obsidian14.setIcon)(resetIcon, "x");
+      showAllBtn.prepend(resetIcon);
+      showAllBtn.addEventListener("click", () => {
+        filterOptions.activeTab = "all";
         onFilterChanged(filterOptions);
       });
     }
     if (filtered.length === 0) {
       const emptyBox = containerEl.createEl("div", { cls: "bills-empty-state-box" });
       const icon = emptyBox.createEl("div", { cls: "bills-empty-icon" });
-      (0, import_obsidian13.setIcon)(icon, "calendar-check-2");
+      (0, import_obsidian14.setIcon)(icon, "calendar-check-2");
+      if (filterOptions.activeTab && filterOptions.activeTab !== "all") {
+        const filterName = filterOptions.activeTab === "overdue" ? "Overdue" : filterOptions.activeTab === "paid" ? "Settled" : "Due Soon";
+        emptyBox.createEl("h3", { text: `No ${filterName} Bills`, cls: "bills-empty-title" });
+        emptyBox.createEl("p", {
+          text: `There are no ${filterName.toLowerCase()} bills for this period.`,
+          cls: "bills-empty-desc"
+        });
+        const showAllBtn = emptyBox.createEl("button", {
+          text: "Show All Bills",
+          cls: "bills-btn-secondary"
+        });
+        showAllBtn.style.marginTop = "12px";
+        showAllBtn.addEventListener("click", () => {
+          filterOptions.activeTab = "all";
+          onFilterChanged(filterOptions);
+        });
+        return;
+      }
       const masterBills = indexService.getAllMasterBills();
       if (masterBills.length === 0) {
         emptyBox.createEl("h3", { text: "No Master Bills Configured", cls: "bills-empty-title" });
@@ -2570,6 +2699,23 @@ var DueLedgerTable = class {
           text: "Generate scheduled due files from your master catalog or adjust filter options.",
           cls: "bills-empty-desc"
         });
+        if (filterOptions.selectedMonth !== "all") {
+          const genBtn = emptyBox.createEl("button", {
+            text: `Generate Dues for ${filterOptions.selectedMonth}`,
+            cls: "mod-cta bills-btn-primary"
+          });
+          genBtn.style.marginTop = "12px";
+          genBtn.addEventListener("click", () => {
+            new GenerateTransactionsModal(
+              app,
+              vaultService,
+              indexService,
+              settings,
+              onRefreshNeeded,
+              filterOptions.selectedMonth
+            ).open();
+          });
+        }
       }
       return;
     }
@@ -2598,9 +2744,9 @@ var DueLedgerTable = class {
         const isAsc = filterOptions.sortAsc !== void 0 ? filterOptions.sortAsc : true;
         if (isCurrentSort) {
           th.addClass("bills-th--active-sort");
-          (0, import_obsidian13.setIcon)(sortIndicator, isAsc ? "chevron-up" : "chevron-down");
+          (0, import_obsidian14.setIcon)(sortIndicator, isAsc ? "chevron-up" : "chevron-down");
         } else {
-          (0, import_obsidian13.setIcon)(sortIndicator, "chevrons-up-down");
+          (0, import_obsidian14.setIcon)(sortIndicator, "chevrons-up-down");
         }
         th.addEventListener("click", () => {
           if (filterOptions.sortBy === col.id) {
@@ -2640,7 +2786,7 @@ var DueLedgerTable = class {
             menu.addItem((item) => {
               item.setTitle("Mark as Pending").setIcon("rotate-ccw").onClick(async () => {
                 await vaultService.toggleTransactionStatus(trans.file, "pending");
-                new import_obsidian13.Notice(`Reset ${trans.masterBillName} to pending.`);
+                new import_obsidian14.Notice(`Reset ${trans.masterBillName} to pending.`);
                 onRefreshNeeded();
               });
             });
@@ -2660,12 +2806,12 @@ var DueLedgerTable = class {
         attr: { "aria-label": isPaid ? "Settled (Click to mark pending)" : "Pending (Click to record payment)" }
       });
       const checkIcon = statusToggleBtn.createEl("span", { cls: "bills-checkbox-icon" });
-      (0, import_obsidian13.setIcon)(checkIcon, isPaid ? "check" : "clock");
+      (0, import_obsidian14.setIcon)(checkIcon, isPaid ? "check" : "clock");
       statusToggleBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (isPaid) {
           await vaultService.toggleTransactionStatus(trans.file, "pending");
-          new import_obsidian13.Notice(`Reset ${trans.masterBillName} to pending.`);
+          new import_obsidian14.Notice(`Reset ${trans.masterBillName} to pending.`);
           onRefreshNeeded();
         } else {
           new PayTransactionModal(app, trans, vaultService, settings, onRefreshNeeded).open();
@@ -2676,7 +2822,7 @@ var DueLedgerTable = class {
           cls: "bills-autopay-chip",
           attr: { "aria-label": "Auto-Pay Enabled" }
         });
-        (0, import_obsidian13.setIcon)(autoPayChip, "zap");
+        (0, import_obsidian14.setIcon)(autoPayChip, "zap");
       }
       const tdName = tr.createEl("td", { cls: "col-name" });
       const nameWrap = tdName.createEl("div", { cls: "bills-name-cell-wrap" });
@@ -2721,7 +2867,7 @@ var DueLedgerTable = class {
         e.stopPropagation();
         const newCat = catSelect.value;
         await vaultService.updateTransactionCategory(trans.file, newCat);
-        new import_obsidian13.Notice(`Updated ${trans.masterBillName} category to "${newCat}"`);
+        new import_obsidian14.Notice(`Updated ${trans.masterBillName} category to "${newCat}"`);
         onRefreshNeeded();
       });
       const tdDue = tr.createEl("td", { cls: "col-due" });
@@ -2752,7 +2898,7 @@ var DueLedgerTable = class {
         const newAmt = isNaN(parsed) || parsed <= 0 ? void 0 : parsed;
         if (newAmt !== trans.amountDue) {
           await vaultService.updateTransactionAmount(trans.file, newAmt);
-          new import_obsidian13.Notice(`Updated amount for ${trans.masterBillName}.`);
+          new import_obsidian14.Notice(`Updated amount for ${trans.masterBillName}.`);
           onRefreshNeeded();
         }
       };
@@ -2782,7 +2928,7 @@ var DueLedgerTable = class {
         e.stopPropagation();
         const newMethod = methodSelect.value || void 0;
         await vaultService.updateTransactionPaymentMethod(trans.file, newMethod);
-        new import_obsidian13.Notice(`Updated ${trans.masterBillName} payment method.`);
+        new import_obsidian14.Notice(`Updated ${trans.masterBillName} payment method.`);
         onRefreshNeeded();
       });
       if (trans.referenceNo) {
@@ -2811,7 +2957,7 @@ var DueLedgerTable = class {
           cls: "clickable-icon bills-table-icon-btn bills-action-btn--pay",
           attr: { "aria-label": "Record payment" }
         });
-        (0, import_obsidian13.setIcon)(payActionBtn, "check-circle-2");
+        (0, import_obsidian14.setIcon)(payActionBtn, "check-circle-2");
         payActionBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           new PayTransactionModal(app, trans, vaultService, settings, onRefreshNeeded).open();
@@ -2821,7 +2967,7 @@ var DueLedgerTable = class {
         cls: `clickable-icon bills-table-icon-btn ${isSelected ? "is-active" : ""}`,
         attr: { "aria-label": "Inspect details & live notes" }
       });
-      (0, import_obsidian13.setIcon)(detailsBtn, "sidebar-close");
+      (0, import_obsidian14.setIcon)(detailsBtn, "sidebar-close");
       detailsBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (onSelectTransaction) {
@@ -2832,7 +2978,7 @@ var DueLedgerTable = class {
         cls: "clickable-icon bills-table-icon-btn",
         attr: { "aria-label": "Open in adjacent split" }
       });
-      (0, import_obsidian13.setIcon)(jumpBtn, "arrow-up-right");
+      (0, import_obsidian14.setIcon)(jumpBtn, "arrow-up-right");
       jumpBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
         await openNoteSafely(app, trans.file, e, { fallbackLeaf: "split" });
@@ -2841,7 +2987,7 @@ var DueLedgerTable = class {
         cls: "clickable-icon bills-table-icon-btn",
         attr: { "aria-label": "More options" }
       });
-      (0, import_obsidian13.setIcon)(moreBtn, "more-vertical");
+      (0, import_obsidian14.setIcon)(moreBtn, "more-vertical");
       moreBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         openNoteActionContextMenu(app, e, trans.file, (menu) => {
@@ -2863,7 +3009,7 @@ var DueLedgerTable = class {
                 true,
                 async () => {
                   await vaultService.deleteTransaction(trans.file);
-                  new import_obsidian13.Notice(`Deleted ${trans.file.name}`);
+                  new import_obsidian14.Notice(`Deleted ${trans.file.name}`);
                   if (isSelected && onSelectTransaction) onSelectTransaction(null);
                   onRefreshNeeded();
                 }
@@ -2883,7 +3029,7 @@ var DueLedgerTable = class {
 };
 
 // src/views/components/AnalyticsDashboard.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 var AnalyticsDashboard = class {
   static render(containerEl, app, indexService, settings) {
     containerEl.empty();
@@ -2964,7 +3110,7 @@ var AnalyticsDashboard = class {
         const mRow = masterList.createEl("div", { cls: "bills-method-row" });
         const left = mRow.createEl("div", { cls: "bills-method-left" });
         const icon = left.createEl("span", { cls: "bills-method-icon" });
-        (0, import_obsidian14.setIcon)(icon, "calendar");
+        (0, import_obsidian15.setIcon)(icon, "calendar");
         left.createEl("span", { text: b.name, cls: "bills-method-name" });
         const right = mRow.createEl("div", { cls: "bills-method-right" });
         right.createEl("span", {
@@ -2979,18 +3125,18 @@ var AnalyticsDashboard = class {
 };
 
 // src/views/components/TransactionInspector.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/utils/domUtils.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 function isTablet() {
   if (typeof window === "undefined") return false;
   const width = window.innerWidth;
-  return (import_obsidian15.Platform.isMobile || width <= 1024) && width >= 768;
+  return (import_obsidian16.Platform.isMobile || width <= 1024) && width >= 768;
 }
 
 // src/views/components/TransactionInspector.ts
-var TransactionInspector = class extends import_obsidian16.Component {
+var TransactionInspector = class extends import_obsidian17.Component {
   constructor(app, containerEl, vaultService, settings, onClose, onRefreshNeeded) {
     super();
     this.transaction = null;
@@ -3019,16 +3165,47 @@ var TransactionInspector = class extends import_obsidian16.Component {
     const trans = this.transaction;
     this.containerEl.style.display = "flex";
     this.containerEl.addClass("is-open");
-    const isMobileDevice = import_obsidian16.Platform.isMobile && !isTablet();
+    const isMobileDevice = import_obsidian17.Platform.isMobile && !isTablet();
     if (isMobileDevice) {
       const dragWrap = this.containerEl.createDiv({ cls: "pos-sheet-drag-handle-wrap" });
       dragWrap.createDiv({ cls: "pos-sheet-drag-handle" });
+      let startY = 0;
+      let currentDelta = 0;
+      dragWrap.addEventListener("touchstart", (e) => {
+        startY = e.touches[0].clientY;
+        currentDelta = 0;
+        this.containerEl.style.transition = "none";
+      }, { passive: true });
+      dragWrap.addEventListener("touchmove", (e) => {
+        const moveY = e.touches[0].clientY;
+        currentDelta = Math.max(0, moveY - startY);
+        if (currentDelta > 0) {
+          this.containerEl.style.transform = `translateY(${currentDelta}px)`;
+        }
+      }, { passive: true });
+      dragWrap.addEventListener("touchend", () => {
+        this.containerEl.style.transition = "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)";
+        if (currentDelta > 70) {
+          this.containerEl.style.transform = "translateY(100%)";
+          setTimeout(() => {
+            this.containerEl.style.transform = "";
+            this.containerEl.style.transition = "";
+            this.onClose();
+          }, 200);
+        } else {
+          this.containerEl.style.transform = "translateY(0)";
+          setTimeout(() => {
+            this.containerEl.style.transform = "";
+            this.containerEl.style.transition = "";
+          }, 200);
+        }
+      });
       dragWrap.addEventListener("click", () => this.onClose());
     }
     const headerEl = this.containerEl.createDiv({ cls: "wawarts-insp-header" });
     const titleArea = headerEl.createDiv({ cls: "wawarts-insp-title-area" });
     const iconEl = titleArea.createSpan({ cls: "wawarts-insp-icon" });
-    (0, import_obsidian16.setIcon)(iconEl, "receipt");
+    (0, import_obsidian17.setIcon)(iconEl, "receipt");
     const headerTitles = titleArea.createDiv({ cls: "wawarts-insp-titles" });
     headerTitles.createEl("h3", { text: trans.masterBillName, cls: "wawarts-insp-title" });
     headerTitles.createEl("div", { text: trans.file.name, cls: "wawarts-insp-subtext" });
@@ -3037,7 +3214,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
       cls: "pos-btn-icon wawarts-insp-action-btn",
       attr: { "aria-label": "Open note in adjacent split (leaves Wawarts open)" }
     });
-    (0, import_obsidian16.setIcon)(openFileBtn, "arrow-up-right");
+    (0, import_obsidian17.setIcon)(openFileBtn, "arrow-up-right");
     openFileBtn.addEventListener("click", async (e) => {
       await openNoteSafely(this.app, trans.file, e, { fallbackLeaf: "split" });
     });
@@ -3045,7 +3222,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
       cls: "pos-btn-icon wawarts-insp-close-btn",
       attr: { "aria-label": "Close inspector (Esc)" }
     });
-    (0, import_obsidian16.setIcon)(closeBtn, "x");
+    (0, import_obsidian17.setIcon)(closeBtn, "x");
     closeBtn.addEventListener("click", () => this.onClose());
     const bodyEl = this.containerEl.createDiv({ cls: "wawarts-insp-body" });
     const heroBox = bodyEl.createDiv({ cls: "wawarts-insp-herobox" });
@@ -3068,7 +3245,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
         text: "Record Payment"
       });
       const payIcon = payBtn.createSpan({ cls: "bills-btn-icon" });
-      (0, import_obsidian16.setIcon)(payIcon, "check-circle-2");
+      (0, import_obsidian17.setIcon)(payIcon, "check-circle-2");
       payBtn.prepend(payIcon);
       payBtn.addEventListener("click", () => {
         new PayTransactionModal(this.app, trans, this.vaultService, this.settings, () => {
@@ -3081,11 +3258,11 @@ var TransactionInspector = class extends import_obsidian16.Component {
         text: "Mark Pending"
       });
       const undoIcon = undoBtn.createSpan({ cls: "bills-btn-icon" });
-      (0, import_obsidian16.setIcon)(undoIcon, "rotate-ccw");
+      (0, import_obsidian17.setIcon)(undoIcon, "rotate-ccw");
       undoBtn.prepend(undoIcon);
       undoBtn.addEventListener("click", async () => {
         await this.vaultService.toggleTransactionStatus(trans.file, "pending");
-        new import_obsidian16.Notice(`Reset ${trans.masterBillName} to pending.`);
+        new import_obsidian17.Notice(`Reset ${trans.masterBillName} to pending.`);
         this.onRefreshNeeded();
       });
     }
@@ -3103,7 +3280,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
         });
         btn.addEventListener("click", async () => {
           await this.vaultService.updateTransactionDueDate(trans.file, targetDate);
-          new import_obsidian16.Notice(`Rescheduled ${trans.masterBillName} to ${targetDate}`);
+          new import_obsidian17.Notice(`Rescheduled ${trans.masterBillName} to ${targetDate}`);
           this.onRefreshNeeded();
         });
       };
@@ -3176,18 +3353,18 @@ var TransactionInspector = class extends import_obsidian16.Component {
       cls: "pos-btn-icon wawarts-insp-append-btn",
       attr: { "aria-label": "Append note" }
     });
-    (0, import_obsidian16.setIcon)(appendBtn, "corner-down-left");
+    (0, import_obsidian17.setIcon)(appendBtn, "corner-down-left");
     const handleAppend = async () => {
       const text = appendInput.value.trim();
       if (!text) return;
       appendInput.value = "";
       try {
         await this.vaultService.appendNoteToTransaction(trans.file, text);
-        new import_obsidian16.Notice(`Added note to ${trans.file.name}`);
+        new import_obsidian17.Notice(`Added note to ${trans.file.name}`);
         this.renderNoteBody(trans);
       } catch (err) {
         console.error("Failed to append note:", err);
-        new import_obsidian16.Notice("Failed to append note.");
+        new import_obsidian17.Notice("Failed to append note.");
       }
     };
     appendInput.addEventListener("keydown", (e) => {
@@ -3203,7 +3380,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
       text: "Open in Tab"
     });
     const tabIcon = openInNewTabBtn.createSpan({ cls: "bills-btn-icon" });
-    (0, import_obsidian16.setIcon)(tabIcon, "file-plus");
+    (0, import_obsidian17.setIcon)(tabIcon, "file-plus");
     openInNewTabBtn.prepend(tabIcon);
     openInNewTabBtn.addEventListener("click", async () => {
       await openNoteSafely(this.app, trans.file, void 0, { fallbackLeaf: "tab" });
@@ -3213,7 +3390,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
       text: "Delete"
     });
     const trashIcon = deleteBtn.createSpan({ cls: "bills-btn-icon" });
-    (0, import_obsidian16.setIcon)(trashIcon, "trash-2");
+    (0, import_obsidian17.setIcon)(trashIcon, "trash-2");
     deleteBtn.prepend(trashIcon);
     deleteBtn.addEventListener("click", () => {
       new ConfirmModal(
@@ -3224,7 +3401,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
         true,
         async () => {
           await this.vaultService.deleteTransaction(trans.file);
-          new import_obsidian16.Notice(`Deleted ${trans.file.name}`);
+          new import_obsidian17.Notice(`Deleted ${trans.file.name}`);
           this.onClose();
           this.onRefreshNeeded();
         }
@@ -3244,7 +3421,7 @@ var TransactionInspector = class extends import_obsidian16.Component {
         });
         return;
       }
-      await import_obsidian16.MarkdownRenderer.render(
+      await import_obsidian17.MarkdownRenderer.render(
         this.app,
         bodyOnly,
         this.noteBodyEl,
@@ -3259,8 +3436,8 @@ var TransactionInspector = class extends import_obsidian16.Component {
 };
 
 // src/views/components/MasterBillInspector.ts
-var import_obsidian17 = require("obsidian");
-var MasterBillInspector = class extends import_obsidian17.Component {
+var import_obsidian18 = require("obsidian");
+var MasterBillInspector = class extends import_obsidian18.Component {
   constructor(app, containerEl, vaultService, indexService, settings, onClose, onRefreshNeeded) {
     super();
     this.masterBill = null;
@@ -3290,16 +3467,47 @@ var MasterBillInspector = class extends import_obsidian17.Component {
     const bill = this.masterBill;
     this.containerEl.style.display = "flex";
     this.containerEl.addClass("is-open");
-    const isMobileDevice = import_obsidian17.Platform.isMobile && !isTablet();
+    const isMobileDevice = import_obsidian18.Platform.isMobile && !isTablet();
     if (isMobileDevice) {
       const dragWrap = this.containerEl.createDiv({ cls: "pos-sheet-drag-handle-wrap" });
       dragWrap.createDiv({ cls: "pos-sheet-drag-handle" });
+      let startY = 0;
+      let currentDelta = 0;
+      dragWrap.addEventListener("touchstart", (e) => {
+        startY = e.touches[0].clientY;
+        currentDelta = 0;
+        this.containerEl.style.transition = "none";
+      }, { passive: true });
+      dragWrap.addEventListener("touchmove", (e) => {
+        const moveY = e.touches[0].clientY;
+        currentDelta = Math.max(0, moveY - startY);
+        if (currentDelta > 0) {
+          this.containerEl.style.transform = `translateY(${currentDelta}px)`;
+        }
+      }, { passive: true });
+      dragWrap.addEventListener("touchend", () => {
+        this.containerEl.style.transition = "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)";
+        if (currentDelta > 70) {
+          this.containerEl.style.transform = "translateY(100%)";
+          setTimeout(() => {
+            this.containerEl.style.transform = "";
+            this.containerEl.style.transition = "";
+            this.onClose();
+          }, 200);
+        } else {
+          this.containerEl.style.transform = "translateY(0)";
+          setTimeout(() => {
+            this.containerEl.style.transform = "";
+            this.containerEl.style.transition = "";
+          }, 200);
+        }
+      });
       dragWrap.addEventListener("click", () => this.onClose());
     }
     const headerEl = this.containerEl.createDiv({ cls: "wawarts-insp-header" });
     const titleArea = headerEl.createDiv({ cls: "wawarts-insp-title-area" });
     const iconEl = titleArea.createSpan({ cls: "wawarts-insp-icon" });
-    (0, import_obsidian17.setIcon)(iconEl, "layers");
+    (0, import_obsidian18.setIcon)(iconEl, "layers");
     const headerTitles = titleArea.createDiv({ cls: "wawarts-insp-titles" });
     headerTitles.createEl("h3", { text: bill.name, cls: "wawarts-insp-title" });
     headerTitles.createEl("div", { text: bill.file.name, cls: "wawarts-insp-subtext" });
@@ -3308,7 +3516,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
       cls: "pos-btn-icon wawarts-insp-action-btn",
       attr: { "aria-label": "Open master note in adjacent split (leaves Wawarts open)" }
     });
-    (0, import_obsidian17.setIcon)(openFileBtn, "arrow-up-right");
+    (0, import_obsidian18.setIcon)(openFileBtn, "arrow-up-right");
     openFileBtn.addEventListener("click", async (e) => {
       await openNoteSafely(this.app, bill.file, e, { fallbackLeaf: "split" });
     });
@@ -3316,7 +3524,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
       cls: "pos-btn-icon wawarts-insp-close-btn",
       attr: { "aria-label": "Close inspector (Esc)" }
     });
-    (0, import_obsidian17.setIcon)(closeBtn, "x");
+    (0, import_obsidian18.setIcon)(closeBtn, "x");
     closeBtn.addEventListener("click", () => this.onClose());
     const bodyEl = this.containerEl.createDiv({ cls: "wawarts-insp-body" });
     const heroBox = bodyEl.createDiv({ cls: "wawarts-insp-herobox" });
@@ -3333,7 +3541,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
       text: "Edit Profile"
     });
     const editIcon = editBtn.createSpan({ cls: "bills-btn-icon" });
-    (0, import_obsidian17.setIcon)(editIcon, "pencil");
+    (0, import_obsidian18.setIcon)(editIcon, "pencil");
     editBtn.prepend(editIcon);
     editBtn.addEventListener("click", () => {
       new EditMasterBillModal(this.app, bill, this.vaultService, this.settings, () => {
@@ -3423,7 +3631,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
       text: "Open in Tab"
     });
     const tabIcon = openInNewTabBtn.createSpan({ cls: "bills-btn-icon" });
-    (0, import_obsidian17.setIcon)(tabIcon, "file-plus");
+    (0, import_obsidian18.setIcon)(tabIcon, "file-plus");
     openInNewTabBtn.prepend(tabIcon);
     openInNewTabBtn.addEventListener("click", async () => {
       await openNoteSafely(this.app, bill.file, void 0, { fallbackLeaf: "tab" });
@@ -3434,7 +3642,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
     });
     toggleActiveBtn.addEventListener("click", async () => {
       await this.vaultService.updateMasterBill(bill.file, { active: !bill.active });
-      new import_obsidian17.Notice(`${bill.name} schedule is now ${!bill.active ? "active" : "paused"}.`);
+      new import_obsidian18.Notice(`${bill.name} schedule is now ${!bill.active ? "active" : "paused"}.`);
       this.onRefreshNeeded();
     });
     const deleteBtn = footerEl.createEl("button", {
@@ -3442,7 +3650,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
       text: "Delete"
     });
     const trashIcon = deleteBtn.createSpan({ cls: "bills-btn-icon" });
-    (0, import_obsidian17.setIcon)(trashIcon, "trash-2");
+    (0, import_obsidian18.setIcon)(trashIcon, "trash-2");
     deleteBtn.prepend(trashIcon);
     deleteBtn.addEventListener("click", () => {
       new ConfirmModal(
@@ -3453,7 +3661,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
         true,
         async () => {
           await this.vaultService.deleteMasterBill(bill.file);
-          new import_obsidian17.Notice(`Deleted master bill ${bill.name}`);
+          new import_obsidian18.Notice(`Deleted master bill ${bill.name}`);
           this.onClose();
           this.onRefreshNeeded();
         }
@@ -3473,7 +3681,7 @@ var MasterBillInspector = class extends import_obsidian17.Component {
         });
         return;
       }
-      await import_obsidian17.MarkdownRenderer.render(
+      await import_obsidian18.MarkdownRenderer.render(
         this.app,
         bodyOnly,
         this.noteBodyEl,
@@ -3487,144 +3695,487 @@ var MasterBillInspector = class extends import_obsidian17.Component {
   }
 };
 
-// src/modals/GenerateTransactionsModal.ts
-var import_obsidian18 = require("obsidian");
-var GenerateTransactionsModal = class extends import_obsidian18.Modal {
-  constructor(app, vaultService, indexService, settings, onGenerated) {
-    var _a;
-    super(app);
-    this.selectedMasterBills = /* @__PURE__ */ new Set();
-    this.amountOverrides = /* @__PURE__ */ new Map();
-    this.appInstance = app;
-    this.vaultService = vaultService;
-    this.indexService = indexService;
-    this.settings = settings;
-    this.onGenerated = onGenerated;
-    this.targetMonth = getCurrentMonthStr();
-    for (const bill of indexService.getAllMasterBills().filter((b) => b.active)) {
-      this.selectedMasterBills.add(bill.id);
-      this.amountOverrides.set(bill.id, (_a = bill.defaultAmount) != null ? _a : 0);
+// src/views/components/BillsMobileFloatingBar.ts
+var import_obsidian20 = require("obsidian");
+
+// src/modals/MonthFilterModal.ts
+var import_obsidian19 = require("obsidian");
+var MONTH_NAMES = [
+  { num: "01", short: "Jan", full: "January" },
+  { num: "02", short: "Feb", full: "February" },
+  { num: "03", short: "Mar", full: "March" },
+  { num: "04", short: "Apr", full: "April" },
+  { num: "05", short: "May", full: "May" },
+  { num: "06", short: "Jun", full: "June" },
+  { num: "07", short: "Jul", full: "July" },
+  { num: "08", short: "Aug", full: "August" },
+  { num: "09", short: "Sep", full: "September" },
+  { num: "10", short: "Oct", full: "October" },
+  { num: "11", short: "Nov", full: "November" },
+  { num: "12", short: "Dec", full: "December" }
+];
+function stepMonth2(monthStr, delta) {
+  if (!monthStr || monthStr === "all") return getCurrentMonthStr();
+  const [yStr, mStr] = monthStr.split("-");
+  let y = parseInt(yStr, 10);
+  let m = parseInt(mStr, 10) + delta;
+  while (m > 12) {
+    m -= 12;
+    y += 1;
+  }
+  while (m < 1) {
+    m += 12;
+    y -= 1;
+  }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+function formatMonthLabel(monthStr) {
+  if (!monthStr || monthStr === "all") return "All Months";
+  const [y, m] = monthStr.split("-").map(Number);
+  if (!y || !m) return monthStr;
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString(void 0, { month: "long", year: "numeric" });
+}
+function formatMonthShort(monthStr) {
+  if (!monthStr || monthStr === "all") return "All";
+  const [y, m] = monthStr.split("-").map(Number);
+  if (!y || !m) return monthStr;
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString(void 0, { month: "short" });
+}
+function triggerHaptic(ms = 10) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(ms);
+    } catch (e) {
     }
+  }
+}
+var MonthFilterModal = class extends import_obsidian19.Modal {
+  constructor(app, indexService, filterOptions, onMonthSelected) {
+    super(app);
+    this.indexService = indexService;
+    this.filterOptions = filterOptions;
+    this.onMonthSelected = onMonthSelected;
+    const todayMonthStr = getCurrentMonthStr();
+    const initialYear = filterOptions.selectedMonth && filterOptions.selectedMonth !== "all" ? parseInt(filterOptions.selectedMonth.split("-")[0], 10) : parseInt(todayMonthStr.split("-")[0], 10);
+    this.viewYear = isNaN(initialYear) ? (/* @__PURE__ */ new Date()).getFullYear() : initialYear;
   }
   onOpen() {
     const { contentEl, modalEl } = this;
-    modalEl.addClass("bills-modal", "bills-modal--generate");
+    modalEl.addClass("bills-modal", "bills-modal--month-picker");
+    contentEl.empty();
+    const todayMonthStr = getCurrentMonthStr();
+    const headerEl = contentEl.createEl("div", { cls: "bills-modal-header bills-month-modal-header" });
+    const titleGroup = headerEl.createEl("div", { cls: "bills-sheet-title-group" });
+    titleGroup.createEl("h2", { text: "Select Due Month", cls: "bills-modal-title" });
+    const currentDisplay = formatMonthLabel(this.filterOptions.selectedMonth);
+    titleGroup.createEl("span", { text: `Currently showing: ${currentDisplay}`, cls: "bills-sheet-current-label" });
+    const closeBtn = headerEl.createEl("button", {
+      cls: "clickable-icon bills-modal-close-icon",
+      attr: { "aria-label": "Close" }
+    });
+    (0, import_obsidian19.setIcon)(closeBtn, "x");
+    closeBtn.addEventListener("click", () => this.close());
+    const bodyEl = contentEl.createEl("div", { cls: "bills-modal-body bills-month-modal-body" });
+    const yearNav = bodyEl.createEl("div", { cls: "bills-month-grid-year-nav" });
+    const prevYearBtn = yearNav.createEl("button", {
+      cls: "clickable-icon bills-year-nav-btn",
+      attr: { "aria-label": "Previous Year" }
+    });
+    (0, import_obsidian19.setIcon)(prevYearBtn, "chevron-left");
+    const yearDisplay = yearNav.createEl("span", {
+      cls: "bills-year-nav-display",
+      text: String(this.viewYear)
+    });
+    const nextYearBtn = yearNav.createEl("button", {
+      cls: "clickable-icon bills-year-nav-btn",
+      attr: { "aria-label": "Next Year" }
+    });
+    (0, import_obsidian19.setIcon)(nextYearBtn, "chevron-right");
+    const gridContainer = bodyEl.createEl("div", { cls: "bills-month-grid" });
+    const selectAndClose = (monthKey) => {
+      triggerHaptic(10);
+      this.onMonthSelected(monthKey);
+      this.close();
+    };
+    const renderGrid = () => {
+      gridContainer.empty();
+      const allTransactions = this.indexService.getAllTransactions();
+      for (const m of MONTH_NAMES) {
+        const monthKey = `${this.viewYear}-${m.num}`;
+        const isSelected = this.filterOptions.selectedMonth === monthKey;
+        const isToday = todayMonthStr === monthKey;
+        const dueCount = allTransactions.filter((t) => t.dueDate && t.dueDate.startsWith(monthKey)).length;
+        const btn = gridContainer.createEl("button", {
+          cls: `bills-month-grid-cell ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""}`,
+          attr: { "aria-label": `${m.full} ${this.viewYear} (${dueCount} dues)` }
+        });
+        const labelWrap = btn.createEl("div", { cls: "bills-month-cell-label-wrap" });
+        labelWrap.createEl("span", { text: m.short, cls: "bills-month-cell-name" });
+        if (dueCount > 0) {
+          labelWrap.createEl("span", { text: String(dueCount), cls: "bills-month-cell-count" });
+        }
+        if (isToday) {
+          btn.createEl("span", { cls: "bills-month-today-dot", attr: { "aria-label": "Current Month" } });
+        }
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          selectAndClose(monthKey);
+        });
+      }
+    };
+    prevYearBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic(10);
+      this.viewYear -= 1;
+      yearDisplay.textContent = String(this.viewYear);
+      renderGrid();
+    });
+    nextYearBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic(10);
+      this.viewYear += 1;
+      yearDisplay.textContent = String(this.viewYear);
+      renderGrid();
+    });
+    renderGrid();
+    const quickSec = bodyEl.createEl("div", { cls: "bills-sheet-section" });
+    quickSec.createEl("div", { text: "Quick Period Jump", cls: "bills-sheet-section-title" });
+    const chipsWrap = quickSec.createEl("div", { cls: "bills-sheet-chips-wrap" });
+    const thisMonthBtn = chipsWrap.createEl("button", {
+      cls: `bills-sheet-chip ${this.filterOptions.selectedMonth === todayMonthStr ? "is-selected" : ""}`,
+      text: `This Month (${formatMonthShort(todayMonthStr)} ${todayMonthStr.split("-")[0]})`
+    });
+    thisMonthBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectAndClose(todayMonthStr);
+    });
+    const nextMonthStr = stepMonth2(todayMonthStr, 1);
+    const nextMonthBtn = chipsWrap.createEl("button", {
+      cls: `bills-sheet-chip ${this.filterOptions.selectedMonth === nextMonthStr ? "is-selected" : ""}`,
+      text: `Next Month (${formatMonthShort(nextMonthStr)})`
+    });
+    nextMonthBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectAndClose(nextMonthStr);
+    });
+    const allMonthsBtn = chipsWrap.createEl("button", {
+      cls: `bills-sheet-chip ${this.filterOptions.selectedMonth === "all" ? "is-selected" : ""}`,
+      text: "All Months (Show All Dues)"
+    });
+    allMonthsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectAndClose("all");
+    });
+    const customSec = bodyEl.createEl("div", { cls: "bills-sheet-section" });
+    customSec.createEl("div", { text: "Custom Month Picker", cls: "bills-sheet-section-title" });
+    const monthInput = customSec.createEl("input", {
+      type: "month",
+      cls: "bills-sheet-month-input"
+    });
+    if (this.filterOptions.selectedMonth !== "all") {
+      monthInput.value = this.filterOptions.selectedMonth;
+    }
+    monthInput.addEventListener("change", () => {
+      if (monthInput.value) {
+        selectAndClose(monthInput.value);
+      }
+    });
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/views/components/BillsMobileFloatingBar.ts
+function formatMonthLabel2(monthStr) {
+  if (!monthStr || monthStr === "all") return "All Months";
+  const [y, m] = monthStr.split("-").map(Number);
+  if (!y || !m) return monthStr;
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString(void 0, { month: "long", year: "numeric" });
+}
+function formatMonthShort2(monthStr) {
+  if (!monthStr || monthStr === "all") return "All";
+  const [y, m] = monthStr.split("-").map(Number);
+  if (!y || !m) return monthStr;
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString(void 0, { month: "short" });
+}
+function triggerHaptic2(ms = 10) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(ms);
+    } catch (e) {
+    }
+  }
+}
+var BillsMobileFloatingBar = class {
+  static render(containerEl, app, indexService, filterOptions, onOptionsChanged, onOpenNewMasterModal, onOpenNewDueModal, onOpenSettingsModal) {
+    containerEl.querySelectorAll(".bills-mobile-floating-bar-wrapper").forEach((el) => el.remove());
+    const wrapper = containerEl.createEl("div", { cls: "bills-mobile-floating-bar-wrapper" });
+    const fab = wrapper.createEl("div", { cls: "bills-mobile-floating-bar" });
+    const selectedMonth = filterOptions.selectedMonth || getCurrentMonthStr();
+    const hasMonthFilter = selectedMonth !== "all";
+    const calendarBtn = fab.createEl("button", {
+      cls: `clickable-icon bills-fab-icon-btn bills-fab-month-btn ${hasMonthFilter ? "is-active-filter" : ""}`,
+      attr: { "aria-label": `Select Due Month: ${formatMonthLabel2(selectedMonth)}` }
+    });
+    const calIcon = calendarBtn.createEl("span", { cls: "bills-fab-btn-icon" });
+    (0, import_obsidian20.setIcon)(calIcon, "calendar");
+    if (hasMonthFilter) {
+      calendarBtn.createEl("span", {
+        text: formatMonthShort2(selectedMonth),
+        cls: "bills-fab-month-badge"
+      });
+    }
+    const openMonthModal = () => {
+      triggerHaptic2(10);
+      new MonthFilterModal(app, indexService, filterOptions, (chosenMonth) => {
+        filterOptions.selectedMonth = chosenMonth;
+        filterOptions.activeTab = "all";
+        filterOptions.searchQuery = "";
+        onOptionsChanged(filterOptions);
+      }).open();
+    };
+    calendarBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openMonthModal();
+    });
+    const masterBtn = fab.createEl("button", {
+      cls: "clickable-icon bills-fab-icon-btn bills-fab-master-btn",
+      attr: { "aria-label": "Add New Master Bill" }
+    });
+    const masterIcon = masterBtn.createEl("span", { cls: "bills-fab-btn-icon" });
+    (0, import_obsidian20.setIcon)(masterIcon, "folder-plus");
+    masterBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic2(10);
+      onOpenNewMasterModal();
+    });
+    const dueBtn = fab.createEl("button", {
+      cls: "clickable-icon bills-fab-icon-btn bills-fab-due-btn",
+      attr: { "aria-label": "Add New Due" }
+    });
+    const dueIcon = dueBtn.createEl("span", { cls: "bills-fab-btn-icon" });
+    (0, import_obsidian20.setIcon)(dueIcon, "calendar-plus");
+    dueBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic2(10);
+      onOpenNewDueModal();
+    });
+    const settingsBtn = fab.createEl("button", {
+      cls: "clickable-icon bills-fab-icon-btn bills-fab-settings-btn",
+      attr: { "aria-label": "Settings & Folder Locations" }
+    });
+    const setIconEl = settingsBtn.createEl("span", { cls: "bills-fab-btn-icon" });
+    (0, import_obsidian20.setIcon)(setIconEl, "settings");
+    settingsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHaptic2(10);
+      onOpenSettingsModal();
+    });
+  }
+};
+
+// src/modals/NewDueModal.ts
+var import_obsidian21 = require("obsidian");
+var NewDueModal = class extends import_obsidian21.Modal {
+  constructor(app, vaultService, indexService, settings, onCreated) {
+    super(app);
+    this.selectedMasterId = "";
+    this.dueName = "";
+    this.dueDate = "";
+    this.amountDue = 0;
+    this.currency = "";
+    this.category = "";
+    this.paymentMethod = "";
+    this.notes = "";
+    this.vaultService = vaultService;
+    this.indexService = indexService;
+    this.settings = settings;
+    this.onCreated = onCreated;
+    const today = /* @__PURE__ */ new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    this.dueDate = `${yyyy}-${mm}-${dd}`;
+    this.currency = settings.currencyCode || settings.currencySymbol || "USD";
+    this.category = settings.defaultCategory || settings.categories[0] || "General";
+    this.paymentMethod = settings.paymentMethods[0] || "Credit Card";
+    const activeBills = indexService.getAllMasterBills().filter((b) => b.active);
+    if (activeBills.length > 0) {
+      this.selectedMasterId = activeBills[0].id;
+      this.applyMasterBill(activeBills[0]);
+    }
+  }
+  applyMasterBill(bill) {
+    var _a;
+    this.dueName = bill.name;
+    this.amountDue = (_a = bill.defaultAmount) != null ? _a : 0;
+    if (bill.currency) this.currency = bill.currency;
+    if (bill.category) this.category = bill.category;
+    if (bill.paymentMethod) this.paymentMethod = bill.paymentMethod;
+    const currentMonth = getCurrentMonthStr();
+    this.dueDate = computeDueDateForMonth(currentMonth, bill.dueDay, bill.frequency);
+  }
+  onOpen() {
+    const { contentEl, modalEl } = this;
+    modalEl.addClass("bills-modal", "bills-modal--due");
     contentEl.empty();
     const headerEl = contentEl.createEl("div", { cls: "bills-modal-header" });
-    headerEl.createEl("h2", { text: "Generate Monthly Bill Due Files", cls: "bills-modal-title" });
+    headerEl.createEl("h2", { text: "Add New Due", cls: "bills-modal-title" });
     headerEl.createEl("p", {
-      text: "Creates individual transactional markdown notes for each selected master bill for the target month.",
+      text: "Create an individual due note for an upcoming payment or one-off expense.",
       cls: "bills-modal-desc"
     });
     const bodyEl = contentEl.createEl("div", { cls: "bills-modal-body" });
-    new import_obsidian18.Setting(bodyEl).setName("Target Month").setDesc("Select billing month (YYYY-MM)").addText((text) => {
-      text.inputEl.type = "month";
-      text.setValue(this.targetMonth);
-      text.onChange((val) => {
-        this.targetMonth = val;
-        this.renderBillList(tableContainer);
+    const activeBills = this.indexService.getAllMasterBills().filter((b) => b.active);
+    const masterSetting = new import_obsidian21.Setting(bodyEl).setName("Master Bill Template").setDesc("Select an existing recurring bill or choose One-off Expense").addDropdown((dropdown) => {
+      if (activeBills.length > 0) {
+        for (const b of activeBills) {
+          dropdown.addOption(b.id, `${b.name} (${b.category})`);
+        }
+      }
+      dropdown.addOption("custom", "-- One-off / Ad-hoc Due --");
+      dropdown.setValue(this.selectedMasterId || "custom");
+      dropdown.onChange((val) => {
+        this.selectedMasterId = val;
+        if (val === "custom") {
+          this.dueName = "";
+          this.amountDue = 0;
+          const today = /* @__PURE__ */ new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth() + 1).padStart(2, "0");
+          const dd = String(today.getDate()).padStart(2, "0");
+          this.dueDate = `${yyyy}-${mm}-${dd}`;
+        } else {
+          const bill = activeBills.find((b) => b.id === val);
+          if (bill) this.applyMasterBill(bill);
+        }
+        this.onOpen();
       });
     });
-    const listHeader = bodyEl.createEl("div", { cls: "bills-gen-list-header" });
-    listHeader.createEl("h3", { text: "Master Bills to Generate", cls: "bills-gen-list-title" });
-    const selectAllBtn = listHeader.createEl("button", { text: "Toggle All", cls: "bills-btn-secondary" });
-    selectAllBtn.addEventListener("click", () => {
-      const allActive = this.indexService.getAllMasterBills().filter((b) => b.active);
-      if (this.selectedMasterBills.size === allActive.length) {
-        this.selectedMasterBills.clear();
-      } else {
-        for (const b of allActive) this.selectedMasterBills.add(b.id);
-      }
-      this.renderBillList(tableContainer);
+    new import_obsidian21.Setting(bodyEl).setName("Due Name").setDesc("Name of the bill item").addText((text) => {
+      text.setPlaceholder("e.g. Netflix, Rent, Groceries").setValue(this.dueName).onChange((val) => {
+        this.dueName = val.trim();
+      });
     });
-    const tableContainer = bodyEl.createEl("div", { cls: "bills-gen-table-container" });
-    this.renderBillList(tableContainer);
+    new import_obsidian21.Setting(bodyEl).setName("Due Date").setDesc("Target due date (YYYY-MM-DD)").addText((text) => {
+      text.inputEl.type = "date";
+      text.setValue(this.dueDate);
+      text.onChange((val) => {
+        this.dueDate = val;
+      });
+    });
+    new import_obsidian21.Setting(bodyEl).setName("Amount Due").setDesc(`Amount payable in ${this.currency}`).addText((text) => {
+      text.setPlaceholder("0.00").setValue(this.amountDue > 0 ? String(this.amountDue) : "").onChange((val) => {
+        const parsed = parseFloat(val.replace(/[^0-9.-]/g, ""));
+        this.amountDue = isNaN(parsed) ? 0 : parsed;
+      });
+    });
+    new import_obsidian21.Setting(bodyEl).setName("Category").setDesc("Expense classification").addDropdown((dropdown) => {
+      const cats = Array.from(
+        /* @__PURE__ */ new Set([...this.settings.categories || [], this.category, "General"])
+      ).filter(Boolean);
+      for (const cat of cats) {
+        dropdown.addOption(cat, cat);
+      }
+      dropdown.setValue(this.category);
+      dropdown.onChange((val) => {
+        this.category = val;
+      });
+    });
+    new import_obsidian21.Setting(bodyEl).setName("Payment Method").setDesc("Intended payment source").addDropdown((dropdown) => {
+      const methods = Array.from(
+        /* @__PURE__ */ new Set([...this.settings.paymentMethods || [], this.paymentMethod, "Other"])
+      ).filter(Boolean);
+      for (const m of methods) {
+        dropdown.addOption(m, m);
+      }
+      dropdown.setValue(this.paymentMethod);
+      dropdown.onChange((val) => {
+        this.paymentMethod = val;
+      });
+    });
+    new import_obsidian21.Setting(bodyEl).setName("Notes (Optional)").setDesc("Additional context or reference").addTextArea((textarea) => {
+      textarea.setValue(this.notes).onChange((val) => {
+        this.notes = val;
+      });
+      textarea.inputEl.rows = 2;
+    });
     const footerEl = contentEl.createEl("div", { cls: "bills-modal-footer" });
-    const cancelBtn = footerEl.createEl("button", { text: "Cancel", cls: "mod-cancel" });
+    const batchBtn = footerEl.createEl("button", {
+      text: "Batch Generate Month...",
+      cls: "bills-btn-secondary bills-modal-extra-btn"
+    });
+    batchBtn.addEventListener("click", () => {
+      this.close();
+      new GenerateTransactionsModal(
+        this.app,
+        this.vaultService,
+        this.indexService,
+        this.settings,
+        this.onCreated
+      ).open();
+    });
+    const rightBtns = footerEl.createEl("div", { cls: "bills-modal-footer-right" });
+    const cancelBtn = rightBtns.createEl("button", { text: "Cancel", cls: "mod-cancel" });
     cancelBtn.addEventListener("click", () => this.close());
-    const generateBtn = footerEl.createEl("button", {
-      text: `Generate Bills`,
+    const createBtn = rightBtns.createEl("button", {
+      text: "Create Due",
       cls: "mod-cta bills-btn-primary"
     });
-    generateBtn.addEventListener("click", () => this.handleGenerate());
+    createBtn.addEventListener("click", () => this.handleCreate());
   }
-  renderBillList(container) {
-    var _a;
-    container.empty();
-    const activeBills = this.indexService.getAllMasterBills().filter((b) => b.active);
-    if (activeBills.length === 0) {
-      container.createEl("div", {
-        text: "No active master bills found. Please create master bills first.",
-        cls: "bills-empty-state-text"
-      });
+  async handleCreate() {
+    if (!this.dueName) {
+      new import_obsidian21.Notice("Please specify a due name.");
       return;
     }
-    for (const bill of activeBills) {
-      const isChecked = this.selectedMasterBills.has(bill.id);
-      const computedDueDate = computeDueDateForMonth(this.targetMonth, bill.dueDay, bill.frequency);
-      const currentAmount = (_a = this.amountOverrides.get(bill.id)) != null ? _a : bill.defaultAmount;
-      const row = container.createEl("div", {
-        cls: `bills-gen-row ${isChecked ? "bills-gen-row--selected" : ""}`
-      });
-      const checkbox = row.createEl("input", { type: "checkbox" });
-      checkbox.checked = isChecked;
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          this.selectedMasterBills.add(bill.id);
-          row.addClass("bills-gen-row--selected");
-        } else {
-          this.selectedMasterBills.delete(bill.id);
-          row.removeClass("bills-gen-row--selected");
-        }
-      });
-      const infoGroup = row.createEl("div", { cls: "bills-gen-info" });
-      infoGroup.createEl("div", { text: bill.name, cls: "bills-gen-name" });
-      infoGroup.createEl("div", {
-        text: `Scheduled Due: ${computedDueDate} (${bill.category})`,
-        cls: "bills-gen-meta"
-      });
-      const amountWrapper = row.createEl("div", { cls: "bills-gen-amount-wrapper" });
-      amountWrapper.createEl("span", { text: this.settings.currencySymbol, cls: "bills-gen-currency" });
-      const amountInput = amountWrapper.createEl("input", {
-        type: "text",
-        cls: "bills-gen-amount-input"
-      });
-      amountInput.value = String(currentAmount);
-      amountInput.addEventListener("input", () => {
-        const parsed = parseFloat(amountInput.value.replace(/[^0-9.-]/g, ""));
-        this.amountOverrides.set(bill.id, isNaN(parsed) ? 0 : parsed);
-      });
-    }
-  }
-  async handleGenerate() {
-    if (!this.targetMonth) {
-      new import_obsidian18.Notice("Please select a target month.");
+    if (!this.dueDate) {
+      new import_obsidian21.Notice("Please specify a due date.");
       return;
     }
     const activeBills = this.indexService.getAllMasterBills().filter((b) => b.active);
-    const selected = activeBills.filter((b) => this.selectedMasterBills.has(b.id));
-    if (selected.length === 0) {
-      new import_obsidian18.Notice("Please select at least one bill to generate.");
-      return;
-    }
+    const masterBill = activeBills.find((b) => b.id === this.selectedMasterId);
     try {
-      const files = await this.vaultService.batchGenerateMonthTransactions(selected, {
-        targetMonth: this.targetMonth,
-        selectedMasterIds: Array.from(this.selectedMasterBills)
+      await this.vaultService.createTransactionFile({
+        masterBillName: this.dueName,
+        masterBillPath: masterBill ? masterBill.filePath : void 0,
+        dueDate: this.dueDate,
+        amountDue: this.amountDue,
+        currency: this.currency,
+        category: this.category,
+        paymentMethod: this.paymentMethod,
+        notes: this.notes
       });
-      new import_obsidian18.Notice(`Generated ${files.length} bill due files for ${this.targetMonth}`);
+      new import_obsidian21.Notice(`Created due: ${this.dueName} (${this.dueDate})`);
       this.close();
-      if (this.onGenerated) this.onGenerated();
+      if (this.onCreated) {
+        this.onCreated();
+      }
     } catch (e) {
-      console.error("Failed to generate transaction files:", e);
-      new import_obsidian18.Notice("Error generating transaction files.");
+      console.error("Failed to create due file:", e);
+      new import_obsidian21.Notice("Error creating due file.");
     }
   }
 };
 
 // src/modals/FolderSettingsModal.ts
-var import_obsidian19 = require("obsidian");
-var FolderSettingsModal = class extends import_obsidian19.Modal {
+var import_obsidian22 = require("obsidian");
+var FolderSettingsModal = class extends import_obsidian22.Modal {
   constructor(app, settings, indexService, vaultService, onSave) {
     super(app);
     this.settings = settings;
@@ -3642,29 +4193,29 @@ var FolderSettingsModal = class extends import_obsidian19.Modal {
     contentEl.addClass("bills-modal-content");
     const headerEl = contentEl.createEl("div", { cls: "bills-modal-header" });
     const iconWrap = headerEl.createEl("span", { cls: "bills-modal-header-icon" });
-    (0, import_obsidian19.setIcon)(iconWrap, "folder-cog");
+    (0, import_obsidian22.setIcon)(iconWrap, "folder-cog");
     headerEl.createEl("h2", { text: "Folder Locations & Settings" });
     const desc = contentEl.createEl("p", {
       text: "Customize where your Master Bill definitions and Monthly Transaction notes are stored in this vault.",
       cls: "bills-modal-desc"
     });
     desc.style.marginBottom = "16px";
-    new import_obsidian19.Setting(contentEl).setName("Master Bills Folder").setDesc("Folder where recurring bill definitions (profiles) are saved.").addText(
+    new import_obsidian22.Setting(contentEl).setName("Master Bills Folder").setDesc("Folder where recurring bill definitions (profiles) are saved.").addText(
       (text) => text.setPlaceholder("Bills/Master").setValue(this.masterFolderVal).onChange((val) => {
         this.masterFolderVal = val.trim();
       })
     );
-    new import_obsidian19.Setting(contentEl).setName("Transactions Folder").setDesc("Folder where monthly due instance files (e.g. 2026/10/...) are generated.").addText(
+    new import_obsidian22.Setting(contentEl).setName("Transactions Folder").setDesc("Folder where monthly due instance files (e.g. 2026/10/...) are generated.").addText(
       (text) => text.setPlaceholder("Bills/Transactions").setValue(this.transactionFolderVal).onChange((val) => {
         this.transactionFolderVal = val.trim();
       })
     );
-    new import_obsidian19.Setting(contentEl).setName("Currency Symbol").setDesc("Symbol displayed alongside bill amounts (e.g. $, \u20AC, \xA3, \u20B1, \xA5).").addText(
+    new import_obsidian22.Setting(contentEl).setName("Currency Symbol").setDesc("Symbol displayed alongside bill amounts (e.g. $, \u20AC, \xA3, \u20B1, \xA5).").addText(
       (text) => text.setPlaceholder("$").setValue(this.currencyVal).onChange((val) => {
         this.currencyVal = val.trim();
       })
     );
-    new import_obsidian19.Setting(contentEl).setName("Urgency Alert Window").setDesc('Days before due date to mark bills as "Due Soon".').addSlider(
+    new import_obsidian22.Setting(contentEl).setName("Urgency Alert Window").setDesc('Days before due date to mark bills as "Due Soon".').addSlider(
       (slider) => slider.setLimits(1, 30, 1).setValue(this.reminderDaysVal).setDynamicTooltip().onChange((val) => {
         this.reminderDaysVal = val;
       })
@@ -3697,11 +4248,11 @@ var FolderSettingsModal = class extends import_obsidian19.Modal {
     });
     saveBtn.addEventListener("click", async () => {
       if (!this.masterFolderVal) {
-        new import_obsidian19.Notice("Master Bills folder path cannot be empty.");
+        new import_obsidian22.Notice("Master Bills folder path cannot be empty.");
         return;
       }
       if (!this.transactionFolderVal) {
-        new import_obsidian19.Notice("Transactions folder path cannot be empty.");
+        new import_obsidian22.Notice("Transactions folder path cannot be empty.");
         return;
       }
       const updated = {
@@ -3712,7 +4263,7 @@ var FolderSettingsModal = class extends import_obsidian19.Modal {
         defaultReminderDays: this.reminderDaysVal
       };
       await this.onSave(updated);
-      new import_obsidian19.Notice("Wawarts folder settings updated & vault re-indexed.");
+      new import_obsidian22.Notice("Wawarts folder settings updated & vault re-indexed.");
       this.close();
     });
   }
@@ -3722,7 +4273,7 @@ var FolderSettingsModal = class extends import_obsidian19.Modal {
 };
 
 // src/views/BillsHubView.ts
-var BillsHubView = class extends import_obsidian20.ItemView {
+var BillsHubView = class extends import_obsidian23.ItemView {
   constructor(leaf, indexService, vaultService, analyticsService, refreshCoordinator, settings, onSaveSettings) {
     super(leaf);
     this.activeHubTab = "transactions";
@@ -3793,10 +4344,10 @@ var BillsHubView = class extends import_obsidian20.ItemView {
       const isEditing = activeTag === "input" || activeTag === "textarea" || activeTag === "select";
       if (e.key === "/" && !isEditing) {
         e.preventDefault();
-        const searchInput = this.contentEl.querySelector(".pos-search-input, .bills-table-search-input");
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.select();
+        const desktopSearch = this.contentEl.querySelector(".pos-search-input, .bills-table-search-input");
+        if (desktopSearch && desktopSearch.offsetParent !== null) {
+          desktopSearch.focus();
+          desktopSearch.select();
         }
       } else if (e.key === "Escape") {
         if (this.selectedTransaction || this.selectedMasterBill) {
@@ -3807,10 +4358,15 @@ var BillsHubView = class extends import_obsidian20.ItemView {
       }
     };
     window.addEventListener("keydown", this.keydownHandler);
+    if (this.settings.hideObsidianMobileNavbar !== false) {
+      document.body.addClass("wawarts-hide-mobile-navbar");
+    }
     await this.indexService.buildFullIndex();
     this.render();
   }
   async onClose() {
+    document.body.removeClass("wawarts-hide-mobile-navbar");
+    document.body.querySelectorAll(".bills-mobile-sheet-backdrop, .bills-mobile-sheet").forEach((el) => el.remove());
     if (this.unsubscribeRefresh) {
       this.unsubscribeRefresh();
     }
@@ -3820,6 +4376,11 @@ var BillsHubView = class extends import_obsidian20.ItemView {
   }
   updateSettings(settings) {
     this.settings = settings;
+    if (this.settings.hideObsidianMobileNavbar !== false) {
+      document.body.addClass("wawarts-hide-mobile-navbar");
+    } else {
+      document.body.removeClass("wawarts-hide-mobile-navbar");
+    }
     this.render();
   }
   openFolderSettingsModal() {
@@ -3853,14 +4414,16 @@ var BillsHubView = class extends import_obsidian20.ItemView {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("diwa-workspace-root", "bills-view-root");
-    const isMobile = import_obsidian20.Platform.isMobile && !isTablet();
+    const isMobile = import_obsidian23.Platform.isMobile && !isTablet() || window.innerWidth <= 768 || document.body.classList.contains("is-phone") || document.body.classList.contains("is-mobile");
     if (isMobile) {
       contentEl.addClass("is-mobile-device");
+    } else {
+      contentEl.removeClass("is-mobile-device");
     }
     const headerEl = contentEl.createEl("div", { cls: "pos-header-bar bills-header-container" });
     const titleSection = headerEl.createEl("div", { cls: "pos-header-title-section bills-title-left" });
     const logoIcon = titleSection.createEl("span", { cls: "bills-title-icon" });
-    (0, import_obsidian20.setIcon)(logoIcon, "calendar-check-2");
+    (0, import_obsidian23.setIcon)(logoIcon, "calendar-check-2");
     titleSection.createEl("span", { text: "Wawarts", cls: "pos-header-logo bills-main-title" });
     titleSection.createEl("span", { text: "Personal Dues & Cashflow Cockpit", cls: "pos-header-subtitle" });
     const summaryContainer = contentEl.createEl("div", { cls: "bills-summary-wrapper" });
@@ -3869,15 +4432,22 @@ var BillsHubView = class extends import_obsidian20.ItemView {
       this.indexService,
       this.settings,
       this.filterOptions.selectedMonth,
+      this.filterOptions.activeTab,
       () => {
         this.activeHubTab = "transactions";
-        this.filterOptions.activeTab = "overdue";
+        this.filterOptions.activeTab = this.filterOptions.activeTab === "overdue" ? "all" : "overdue";
         this.persistFilters();
         this.render();
       },
       () => {
         this.activeHubTab = "transactions";
-        this.filterOptions.activeTab = "pending";
+        this.filterOptions.activeTab = this.filterOptions.activeTab === "pending" ? "all" : "pending";
+        this.persistFilters();
+        this.render();
+      },
+      () => {
+        this.activeHubTab = "transactions";
+        this.filterOptions.activeTab = this.filterOptions.activeTab === "paid" ? "all" : "paid";
         this.persistFilters();
         this.render();
       }
@@ -3947,6 +4517,38 @@ var BillsHubView = class extends import_obsidian20.ItemView {
       () => this.render()
     );
     this.renderStage(mainStageContainer, inspectorContainer);
+    BillsMobileFloatingBar.render(
+      contentEl,
+      this.app,
+      this.indexService,
+      this.filterOptions,
+      (newOptions) => {
+        this.filterOptions = newOptions;
+        this.activeHubTab = "transactions";
+        this.selectedTransaction = null;
+        this.selectedMasterBill = null;
+        this.persistFilters();
+        this.render();
+      },
+      () => {
+        new NewMasterBillModal(
+          this.app,
+          this.vaultService,
+          this.settings,
+          () => this.render()
+        ).open();
+      },
+      () => {
+        new NewDueModal(
+          this.app,
+          this.vaultService,
+          this.indexService,
+          this.settings,
+          () => this.render()
+        ).open();
+      },
+      () => this.openFolderSettingsModal()
+    );
   }
   renderStage(mainContainer, inspectorContainer) {
     var _a, _b;
@@ -4018,12 +4620,26 @@ var BillsHubView = class extends import_obsidian20.ItemView {
     } else if (this.transactionInspector) {
       this.transactionInspector.inspect(null);
     }
+    let inspectorBackdrop = this.contentEl.querySelector(".wawarts-inspector-backdrop");
+    const isSelected = !!(this.selectedTransaction || this.selectedMasterBill);
+    if (isSelected) {
+      if (!inspectorBackdrop) {
+        inspectorBackdrop = this.contentEl.createEl("div", { cls: "wawarts-inspector-backdrop" });
+        inspectorBackdrop.addEventListener("click", () => {
+          this.selectedTransaction = null;
+          this.selectedMasterBill = null;
+          this.render();
+        });
+      }
+    } else if (inspectorBackdrop) {
+      inspectorBackdrop.remove();
+    }
   }
 };
 
 // src/settings/SettingsTab.ts
-var import_obsidian21 = require("obsidian");
-var RecurringBillsSettingTab = class extends import_obsidian21.PluginSettingTab {
+var import_obsidian24 = require("obsidian");
+var RecurringBillsSettingTab = class extends import_obsidian24.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -4034,19 +4650,19 @@ var RecurringBillsSettingTab = class extends import_obsidian21.PluginSettingTab 
     containerEl.addClass("bills-settings-root");
     containerEl.createEl("h2", { text: "Wawarts Settings" });
     containerEl.createEl("h3", { text: "Master Data & Transaction Folders" });
-    new import_obsidian21.Setting(containerEl).setName("Master Bills Folder").setDesc("Folder where master bill definitions and profiles are stored.").addText(
+    new import_obsidian24.Setting(containerEl).setName("Master Bills Folder").setDesc("Folder where master bill definitions and profiles are stored.").addText(
       (text) => text.setPlaceholder("Bills/Master").setValue(this.plugin.settings.masterFolder).onChange(async (val) => {
         this.plugin.settings.masterFolder = val.trim() || "Bills/Master";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian21.Setting(containerEl).setName("Transactions Folder").setDesc("Folder where individual monthly bill due files and receipts are created.").addText(
+    new import_obsidian24.Setting(containerEl).setName("Transactions Folder").setDesc("Folder where individual monthly bill due files and receipts are created.").addText(
       (text) => text.setPlaceholder("Bills/Transactions").setValue(this.plugin.settings.transactionsFolder).onChange(async (val) => {
         this.plugin.settings.transactionsFolder = val.trim() || "Bills/Transactions";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian21.Setting(containerEl).setName("Transaction Folder Organization").setDesc("How transaction files are partitioned.").addDropdown((dropdown) => {
+    new import_obsidian24.Setting(containerEl).setName("Transaction Folder Organization").setDesc("How transaction files are partitioned.").addDropdown((dropdown) => {
       dropdown.addOption("year-month", "Year / Month (e.g. Transactions/2026/10/)");
       dropdown.addOption("by-bill", "By Bill Item (e.g. Transactions/Netflix/)");
       dropdown.addOption("flat", "Flat Folder (e.g. Transactions/)");
@@ -4057,39 +4673,39 @@ var RecurringBillsSettingTab = class extends import_obsidian21.PluginSettingTab 
       });
     });
     containerEl.createEl("h3", { text: "Tags & Status Metadata" });
-    new import_obsidian21.Setting(containerEl).setName("Paid Status Tag").setDesc("Tag applied to transactional files when paid (without #).").addText(
+    new import_obsidian24.Setting(containerEl).setName("Paid Status Tag").setDesc("Tag applied to transactional files when paid (without #).").addText(
       (text) => text.setPlaceholder("bill/paid").setValue(this.plugin.settings.paidTag).onChange(async (val) => {
         this.plugin.settings.paidTag = val.trim().replace(/^#/, "") || "bill/paid";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian21.Setting(containerEl).setName("Pending Status Tag").setDesc("Tag applied to transactional files when due/pending (without #).").addText(
+    new import_obsidian24.Setting(containerEl).setName("Pending Status Tag").setDesc("Tag applied to transactional files when due/pending (without #).").addText(
       (text) => text.setPlaceholder("bill/pending").setValue(this.plugin.settings.pendingTag).onChange(async (val) => {
         this.plugin.settings.pendingTag = val.trim().replace(/^#/, "") || "bill/pending";
         await this.plugin.saveSettings();
       })
     );
     containerEl.createEl("h3", { text: "Currency & Display" });
-    new import_obsidian21.Setting(containerEl).setName("Currency Symbol").setDesc("Prefix symbol for amounts (e.g. $, \u20AC, \xA3, \xA5, \u20B1)").addText(
+    new import_obsidian24.Setting(containerEl).setName("Currency Symbol").setDesc("Prefix symbol for amounts (e.g. $, \u20AC, \xA3, \xA5, \u20B1)").addText(
       (text) => text.setPlaceholder("$").setValue(this.plugin.settings.currencySymbol).onChange(async (val) => {
         this.plugin.settings.currencySymbol = val.trim() || "$";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian21.Setting(containerEl).setName("Currency Code").setDesc("ISO currency code (e.g. USD, EUR, GBP, JPY)").addText(
+    new import_obsidian24.Setting(containerEl).setName("Currency Code").setDesc("ISO currency code (e.g. USD, EUR, GBP, JPY)").addText(
       (text) => text.setPlaceholder("USD").setValue(this.plugin.settings.currencyCode).onChange(async (val) => {
         this.plugin.settings.currencyCode = val.trim().toUpperCase() || "USD";
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian21.Setting(containerEl).setName("Default Reminder Window (Days)").setDesc("Days before due date to activate the warning alert.").addSlider(
+    new import_obsidian24.Setting(containerEl).setName("Default Reminder Window (Days)").setDesc("Days before due date to activate the warning alert.").addSlider(
       (slider) => slider.setLimits(1, 14, 1).setValue(this.plugin.settings.defaultReminderDays).setDynamicTooltip().onChange(async (val) => {
         this.plugin.settings.defaultReminderDays = val;
         await this.plugin.saveSettings();
       })
     );
     containerEl.createEl("h3", { text: "Status Bar & Display" });
-    new import_obsidian21.Setting(containerEl).setName("Show Status Bar Item").setDesc("Display yearly completion % and pending count in the Obsidian status bar.").addToggle(
+    new import_obsidian24.Setting(containerEl).setName("Show Status Bar Item").setDesc("Display yearly completion % and pending count in the Obsidian status bar.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.enableStatusBar).onChange(async (val) => {
         this.plugin.settings.enableStatusBar = val;
         await this.plugin.saveSettings();
@@ -4097,7 +4713,7 @@ var RecurringBillsSettingTab = class extends import_obsidian21.PluginSettingTab 
       })
     );
     containerEl.createEl("h3", { text: "Categories & Payment Methods" });
-    new import_obsidian21.Setting(containerEl).setName("Categories").setDesc("Comma-separated list of categories.").addTextArea((textarea) => {
+    new import_obsidian24.Setting(containerEl).setName("Categories").setDesc("Comma-separated list of categories.").addTextArea((textarea) => {
       textarea.inputEl.rows = 3;
       textarea.setValue(this.plugin.settings.categories.join(", ")).onChange(async (val) => {
         const cats = val.split(",").map((c) => c.trim()).filter(Boolean);
@@ -4105,7 +4721,7 @@ var RecurringBillsSettingTab = class extends import_obsidian21.PluginSettingTab 
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian21.Setting(containerEl).setName("Payment Methods").setDesc("Comma-separated list of payment sources.").addTextArea((textarea) => {
+    new import_obsidian24.Setting(containerEl).setName("Payment Methods").setDesc("Comma-separated list of payment sources.").addTextArea((textarea) => {
       textarea.inputEl.rows = 2;
       textarea.setValue(this.plugin.settings.paymentMethods.join(", ")).onChange(async (val) => {
         const methods = val.split(",").map((m) => m.trim()).filter(Boolean);
@@ -4113,11 +4729,19 @@ var RecurringBillsSettingTab = class extends import_obsidian21.PluginSettingTab 
         await this.plugin.saveSettings();
       });
     });
+    containerEl.createEl("h3", { text: "Mobile Experience" });
+    new import_obsidian24.Setting(containerEl).setName("Hide Obsidian Navigation Bar").setDesc("Automatically hide Obsidian\u2019s bottom mobile navigation bar when Wawarts is active, giving full screen space to the Wawarts floating action bar.").addToggle((toggle) => {
+      toggle.setValue(this.plugin.settings.hideObsidianMobileNavbar !== false);
+      toggle.onChange(async (val) => {
+        this.plugin.settings.hideObsidianMobileNavbar = val;
+        await this.plugin.saveSettings();
+      });
+    });
   }
 };
 
 // src/main.ts
-var TransactionPickerModal = class extends import_obsidian22.SuggestModal {
+var TransactionPickerModal = class extends import_obsidian25.SuggestModal {
   constructor(app, transactions, symbol, onChoose) {
     super(app);
     this.transactions = transactions;
@@ -4147,11 +4771,11 @@ var TransactionPickerModal = class extends import_obsidian22.SuggestModal {
     this.onChoose(trans);
   }
 };
-var RecurringBillsPlugin = class extends import_obsidian22.Plugin {
+var RecurringBillsPlugin = class extends import_obsidian25.Plugin {
   async onload() {
     console.log(`Loading ${PLUGIN_NAME}...`);
     await this.loadSettings();
-    (0, import_obsidian22.addIcon)(BILLS_RIBBON_ICON_ID, BILLS_RIBBON_ICON_SVG);
+    (0, import_obsidian25.addIcon)(BILLS_RIBBON_ICON_ID, BILLS_RIBBON_ICON_SVG);
     this.vaultService = new BillVaultService(this.app, this.settings);
     this.indexService = new BillIndexService(this.app, this.settings);
     this.analyticsService = new AnalyticsService(this.settings);
@@ -4224,7 +4848,7 @@ var RecurringBillsPlugin = class extends import_obsidian22.Plugin {
       callback: () => {
         const pending = this.indexService.getAllTransactions().filter((t) => t.status === "pending" || t.status === "overdue");
         if (pending.length === 0) {
-          new import_obsidian22.Notice("No pending due bills found.");
+          new import_obsidian25.Notice("No pending due bills found.");
           return;
         }
         new TransactionPickerModal(this.app, pending, this.settings.currencySymbol, (selected) => {

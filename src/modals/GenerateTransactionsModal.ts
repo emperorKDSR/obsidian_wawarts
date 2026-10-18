@@ -21,7 +21,8 @@ export class GenerateTransactionsModal extends Modal {
         vaultService: BillVaultService,
         indexService: BillIndexService,
         settings: RecurringBillsSettings,
-        onGenerated?: () => void
+        onGenerated?: () => void,
+        initialTargetMonth?: string
     ) {
         super(app);
         this.appInstance = app;
@@ -30,7 +31,7 @@ export class GenerateTransactionsModal extends Modal {
         this.settings = settings;
         this.onGenerated = onGenerated;
 
-        this.targetMonth = getCurrentMonthStr();
+        this.targetMonth = initialTargetMonth || getCurrentMonthStr();
         // Default select all active master bills
         for (const bill of indexService.getAllMasterBills().filter((b) => b.active)) {
             this.selectedMasterBills.add(bill.id);

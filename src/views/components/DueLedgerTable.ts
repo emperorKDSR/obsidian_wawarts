@@ -7,6 +7,7 @@ import { getRelativeDueDateLabel } from '../../utils/dateUtils';
 import { PayTransactionModal } from '../../modals/PayTransactionModal';
 import { TransactionDetailsModal } from '../../modals/TransactionDetailsModal';
 import { ConfirmModal } from '../../modals/ConfirmModal';
+import { GenerateTransactionsModal } from '../../modals/GenerateTransactionsModal';
 import { BillCardItem } from './BillCardItem';
 import { openNoteSafely, attachHoverPreview, openNoteActionContextMenu } from '../../utils/navigationUtils';
 
@@ -28,22 +29,28 @@ export class DueLedgerTable {
 
         const filtered = indexService.getFilteredTransactions(filterOptions);
 
-        // Check if there are overdue items to display urgent banner
-        const overdue = filtered.filter((t) => t.status === 'overdue' || (t.status === 'pending' && t.daysUntilDue < 0));
-        if (overdue.length > 0 && filterOptions.activeTab !== 'overdue') {
-            const banner = containerEl.createEl('div', { cls: 'bills-urgent-banner' });
-            const bIcon = banner.createEl('span', { cls: 'bills-urgent-icon' });
-            setIcon(bIcon, 'alert-triangle');
-            banner.createEl('span', {
-                text: `${overdue.length} overdue bill${overdue.length === 1 ? '' : 's'} require payment action.`,
-                cls: 'bills-urgent-text',
+        // Active Filter indicator with one-tap "Show All Bills" reset
+        if (filterOptions.activeTab && filterOptions.activeTab !== 'all') {
+            const filterBar = containerEl.createEl('div', { cls: 'bills-active-filter-bar' });
+            const filterName = filterOptions.activeTab === 'overdue' ? 'Overdue'
+                : filterOptions.activeTab === 'paid' ? 'Settled'
+                : 'Due Soon';
+
+            filterBar.createEl('span', {
+                text: `Filtered: ${filterName} (${filtered.length})`,
+                cls: 'bills-active-filter-label',
             });
-            const filterOverdueBtn = banner.createEl('button', {
-                text: 'Filter Overdue',
-                cls: 'bills-urgent-btn',
+
+            const showAllBtn = filterBar.createEl('button', {
+                text: 'Show All',
+                cls: 'bills-active-filter-btn',
             });
-            filterOverdueBtn.addEventListener('click', () => {
-                filterOptions.activeTab = 'overdue';
+            const resetIcon = showAllBtn.createSpan({ cls: 'bills-btn-icon' });
+            setIcon(resetIcon, 'x');
+            showAllBtn.prepend(resetIcon);
+
+            showAllBtn.addEventListener('click', () => {
+                filterOptions.activeTab = 'all';
                 onFilterChanged(filterOptions);
             });
         }
@@ -52,6 +59,27 @@ export class DueLedgerTable {
             const emptyBox = containerEl.createEl('div', { cls: 'bills-empty-state-box' });
             const icon = emptyBox.createEl('div', { cls: 'bills-empty-icon' });
             setIcon(icon, 'calendar-check-2');
+
+            if (filterOptions.activeTab && filterOptions.activeTab !== 'all') {
+                const filterName = filterOptions.activeTab === 'overdue' ? 'Overdue'
+                    : filterOptions.activeTab === 'paid' ? 'Settled'
+                    : 'Due Soon';
+                emptyBox.createEl('h3', { text: `No ${filterName} Bills`, cls: 'bills-empty-title' });
+                emptyBox.createEl('p', {
+                    text: `There are no ${filterName.toLowerCase()} bills for this period.`,
+                    cls: 'bills-empty-desc',
+                });
+                const showAllBtn = emptyBox.createEl('button', {
+                    text: 'Show All Bills',
+                    cls: 'bills-btn-secondary',
+                });
+                showAllBtn.style.marginTop = '12px';
+                showAllBtn.addEventListener('click', () => {
+                    filterOptions.activeTab = 'all';
+                    onFilterChanged(filterOptions);
+                });
+                return;
+            }
 
             const masterBills = indexService.getAllMasterBills();
             if (masterBills.length === 0) {
@@ -69,6 +97,23 @@ export class DueLedgerTable {
                     text: 'Generate scheduled due files from your master catalog or adjust filter options.',
                     cls: 'bills-empty-desc',
                 });
+                if (filterOptions.selectedMonth !== 'all') {
+                    const genBtn = emptyBox.createEl('button', {
+                        text: `Generate Dues for ${filterOptions.selectedMonth}`,
+                        cls: 'mod-cta bills-btn-primary',
+                    });
+                    genBtn.style.marginTop = '12px';
+                    genBtn.addEventListener('click', () => {
+                        new GenerateTransactionsModal(
+                            app,
+                            vaultService,
+                            indexService,
+                            settings,
+                            onRefreshNeeded,
+                            filterOptions.selectedMonth
+                        ).open();
+                    });
+                }
             }
             return;
         }

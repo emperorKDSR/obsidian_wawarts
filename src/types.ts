@@ -159,6 +159,7 @@ export interface RecurringBillsSettings {
     savedTransactionFilters?: Partial<TransactionFilterOptions>;
     savedMasterFilters?: Partial<MasterFilterOptions>;
     savedActiveHubTab?: HubTab;
+    hideObsidianMobileNavbar?: boolean;
 }
 
 export interface MonthSummary {

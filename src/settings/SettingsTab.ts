@@ -184,5 +184,19 @@ export class RecurringBillsSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
+
+        // Mobile Experience
+        containerEl.createEl('h3', { text: 'Mobile Experience' });
+
+        new Setting(containerEl)
+            .setName('Hide Obsidian Navigation Bar')
+            .setDesc('Automatically hide Obsidian’s bottom mobile navigation bar when Wawarts is active, giving full screen space to the Wawarts floating action bar.')
+            .addToggle((toggle) => {
+                toggle.setValue(this.plugin.settings.hideObsidianMobileNavbar !== false);
+                toggle.onChange(async (val) => {
+                    this.plugin.settings.hideObsidianMobileNavbar = val;
+                    await this.plugin.saveSettings();
+                });
+            });
     }
 }

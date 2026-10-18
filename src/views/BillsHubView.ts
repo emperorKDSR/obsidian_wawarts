@@ -19,7 +19,9 @@ import { DueLedgerTable } from './components/DueLedgerTable';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { TransactionInspector } from './components/TransactionInspector';
 import { MasterBillInspector } from './components/MasterBillInspector';
+import { BillsMobileFloatingBar } from './components/BillsMobileFloatingBar';
 import { NewMasterBillModal } from '../modals/NewMasterBillModal';
+import { NewDueModal } from '../modals/NewDueModal';
 import { GenerateTransactionsModal } from '../modals/GenerateTransactionsModal';
 import { FolderSettingsModal } from '../modals/FolderSettingsModal';
 import { getCurrentMonthStr, getCurrentYearStr } from '../utils/dateUtils';
@@ -123,10 +125,10 @@ export class BillsHubView extends ItemView {
 
             if (e.key === '/' && !isEditing) {
                 e.preventDefault();
-                const searchInput = this.contentEl.querySelector<HTMLInputElement>('.pos-search-input, .bills-table-search-input');
-                if (searchInput) {
-                    searchInput.focus();
-                    searchInput.select();
+                const desktopSearch = this.contentEl.querySelector<HTMLInputElement>('.pos-search-input, .bills-table-search-input');
+                if (desktopSearch && desktopSearch.offsetParent !== null) {
+                    desktopSearch.focus();
+                    desktopSearch.select();
                 }
             } else if (e.key === 'Escape') {
                 if (this.selectedTransaction || this.selectedMasterBill) {
@@ -138,11 +140,17 @@ export class BillsHubView extends ItemView {
         };
         window.addEventListener('keydown', this.keydownHandler);
 
+        if (this.settings.hideObsidianMobileNavbar !== false) {
+            document.body.addClass('wawarts-hide-mobile-navbar');
+        }
+
         await this.indexService.buildFullIndex();
         this.render();
     }
 
     async onClose(): Promise<void> {
+        document.body.removeClass('wawarts-hide-mobile-navbar');
+        document.body.querySelectorAll('.bills-mobile-sheet-backdrop, .bills-mobile-sheet').forEach((el) => el.remove());
         if (this.unsubscribeRefresh) {
             this.unsubscribeRefresh();
         }
@@ -153,6 +161,11 @@ export class BillsHubView extends ItemView {
 
     updateSettings(settings: RecurringBillsSettings): void {
         this.settings = settings;
+        if (this.settings.hideObsidianMobileNavbar !== false) {
+            document.body.addClass('wawarts-hide-mobile-navbar');
+        } else {
+            document.body.removeClass('wawarts-hide-mobile-navbar');
+        }
         this.render();
     }
 
@@ -190,9 +203,15 @@ export class BillsHubView extends ItemView {
         contentEl.empty();
         contentEl.addClass('diwa-workspace-root', 'bills-view-root');
 
-        const isMobile = Platform.isMobile && !isTablet();
+        const isMobile =
+            (Platform.isMobile && !isTablet()) ||
+            window.innerWidth <= 768 ||
+            document.body.classList.contains('is-phone') ||
+            document.body.classList.contains('is-mobile');
         if (isMobile) {
             contentEl.addClass('is-mobile-device');
+        } else {
+            contentEl.removeClass('is-mobile-device');
         }
 
         // --- 1. Top Header Bar (DIWA pos-header-bar style) ---
@@ -212,15 +231,22 @@ export class BillsHubView extends ItemView {
             this.indexService,
             this.settings,
             this.filterOptions.selectedMonth,
+            this.filterOptions.activeTab,
             () => {
                 this.activeHubTab = 'transactions';
-                this.filterOptions.activeTab = 'overdue';
+                this.filterOptions.activeTab = this.filterOptions.activeTab === 'overdue' ? 'all' : 'overdue';
                 this.persistFilters();
                 this.render();
             },
             () => {
                 this.activeHubTab = 'transactions';
-                this.filterOptions.activeTab = 'pending';
+                this.filterOptions.activeTab = this.filterOptions.activeTab === 'pending' ? 'all' : 'pending';
+                this.persistFilters();
+                this.render();
+            },
+            () => {
+                this.activeHubTab = 'transactions';
+                this.filterOptions.activeTab = this.filterOptions.activeTab === 'paid' ? 'all' : 'paid';
                 this.persistFilters();
                 this.render();
             }
@@ -302,6 +328,40 @@ export class BillsHubView extends ItemView {
         );
 
         this.renderStage(mainStageContainer, inspectorContainer);
+
+        // --- 5. Mobile Floating Action Bar (Month Filter, New Master, New Due, Settings) ---
+        BillsMobileFloatingBar.render(
+            contentEl,
+            this.app,
+            this.indexService,
+            this.filterOptions,
+            (newOptions) => {
+                this.filterOptions = newOptions;
+                this.activeHubTab = 'transactions';
+                this.selectedTransaction = null;
+                this.selectedMasterBill = null;
+                this.persistFilters();
+                this.render();
+            },
+            () => {
+                new NewMasterBillModal(
+                    this.app,
+                    this.vaultService,
+                    this.settings,
+                    () => this.render()
+                ).open();
+            },
+            () => {
+                new NewDueModal(
+                    this.app,
+                    this.vaultService,
+                    this.indexService,
+                    this.settings,
+                    () => this.render()
+                ).open();
+            },
+            () => this.openFolderSettingsModal()
+        );
     }
 
     private renderStage(mainContainer: HTMLElement, inspectorContainer: HTMLElement): void {
@@ -380,6 +440,22 @@ export class BillsHubView extends ItemView {
             this.transactionInspector.inspect(this.selectedTransaction);
         } else if (this.transactionInspector) {
             this.transactionInspector.inspect(null);
+        }
+
+        // DIWA Inspector Backdrop for Mobile Bottom Sheet
+        let inspectorBackdrop = this.contentEl.querySelector<HTMLElement>('.wawarts-inspector-backdrop');
+        const isSelected = !!(this.selectedTransaction || this.selectedMasterBill);
+        if (isSelected) {
+            if (!inspectorBackdrop) {
+                inspectorBackdrop = this.contentEl.createEl('div', { cls: 'wawarts-inspector-backdrop' });
+                inspectorBackdrop.addEventListener('click', () => {
+                    this.selectedTransaction = null;
+                    this.selectedMasterBill = null;
+                    this.render();
+                });
+            }
+        } else if (inspectorBackdrop) {
+            inspectorBackdrop.remove();
         }
     }
 }

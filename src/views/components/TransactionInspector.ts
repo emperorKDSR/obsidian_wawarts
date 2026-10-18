@@ -59,10 +59,45 @@ export class TransactionInspector extends Component {
 
         const isMobileDevice = Platform.isMobile && !isTablet();
 
-        // 1. Mobile Drag Handle
+        // 1. Mobile Drag Handle with Swipe-to-Dismiss Gesture
         if (isMobileDevice) {
             const dragWrap = this.containerEl.createDiv({ cls: 'pos-sheet-drag-handle-wrap' });
             dragWrap.createDiv({ cls: 'pos-sheet-drag-handle' });
+
+            let startY = 0;
+            let currentDelta = 0;
+            dragWrap.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                currentDelta = 0;
+                this.containerEl.style.transition = 'none';
+            }, { passive: true });
+
+            dragWrap.addEventListener('touchmove', (e) => {
+                const moveY = e.touches[0].clientY;
+                currentDelta = Math.max(0, moveY - startY);
+                if (currentDelta > 0) {
+                    this.containerEl.style.transform = `translateY(${currentDelta}px)`;
+                }
+            }, { passive: true });
+
+            dragWrap.addEventListener('touchend', () => {
+                this.containerEl.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
+                if (currentDelta > 70) {
+                    this.containerEl.style.transform = 'translateY(100%)';
+                    setTimeout(() => {
+                        this.containerEl.style.transform = '';
+                        this.containerEl.style.transition = '';
+                        this.onClose();
+                    }, 200);
+                } else {
+                    this.containerEl.style.transform = 'translateY(0)';
+                    setTimeout(() => {
+                        this.containerEl.style.transform = '';
+                        this.containerEl.style.transition = '';
+                    }, 200);
+                }
+            });
+
             dragWrap.addEventListener('click', () => this.onClose());
         }
 
